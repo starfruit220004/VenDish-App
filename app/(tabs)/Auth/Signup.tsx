@@ -4,9 +4,9 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, useColorSch
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthContext } from '../MainDrawer'; // ✅ FIXED: Import from MainDrawer
+import { AuthContext } from '../MainDrawer'; 
 
-// ✅ FIXED: Use Drawer navigation types
+// Drawer navigation types
 type DrawerParamList = {
   Tabs: undefined;
   Login: undefined;
@@ -32,7 +32,6 @@ export default function Signup() {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
@@ -49,31 +48,27 @@ export default function Signup() {
       {/* Logo */}
       <View style={styles.logoContainer}>
         <Text style={[styles.logo, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>🍽️</Text>
-        <Text style={[styles.title, { color: isDarkMode ? '#FFF' : '#B71C1C' }]}>
-          Create Account
-        </Text>
-        <Text style={[styles.subtitle, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
-          Sign up to get started
-        </Text>
+        <Text style={[styles.title, { color: isDarkMode ? '#FFF' : '#B71C1C' }]}>Create Account</Text>
+        <Text style={[styles.subtitle, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>Sign up to get started</Text>
       </View>
 
       {/* Form */}
       <View style={styles.formContainer}>
-        <View style={styles.inputContainer}>
-          <Ionicons name="person-outline" size={20} color="#757575" style={styles.inputIcon} />
+        <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }]}>
+          <Ionicons name="person-outline" size={20} color={isDarkMode ? '#E0E0E0' : '#757575'} style={styles.inputIcon} />
           <TextInput
-            style={[styles.input, { color: isDarkMode ? '#FFF' : '#424242', backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }]}
-            placeholder="Full Name"
+            style={[styles.input, { color: isDarkMode ? '#FFF' : '#424242' }]}
+            placeholder="Username"
             placeholderTextColor="#9E9E9E"
             value={name}
             onChangeText={setName}
           />
         </View>
 
-        <View style={styles.inputContainer}>
-          <Ionicons name="mail-outline" size={20} color="#757575" style={styles.inputIcon} />
+        <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }]}>
+          <Ionicons name="mail-outline" size={20} color={isDarkMode ? '#E0E0E0' : '#757575'} style={styles.inputIcon} />
           <TextInput
-            style={[styles.input, { color: isDarkMode ? '#FFF' : '#424242', backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }]}
+            style={[styles.input, { color: isDarkMode ? '#FFF' : '#424242' }]}
             placeholder="Email"
             placeholderTextColor="#9E9E9E"
             value={email}
@@ -83,10 +78,10 @@ export default function Signup() {
           />
         </View>
 
-        <View style={styles.inputContainer}>
-          <Ionicons name="lock-closed-outline" size={20} color="#757575" style={styles.inputIcon} />
+        <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }]}>
+          <Ionicons name="lock-closed-outline" size={20} color={isDarkMode ? '#E0E0E0' : '#757575'} style={styles.inputIcon} />
           <TextInput
-            style={[styles.input, { color: isDarkMode ? '#FFF' : '#424242', backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }]}
+            style={[styles.input, { color: isDarkMode ? '#FFF' : '#424242' }]}
             placeholder="Password"
             placeholderTextColor="#9E9E9E"
             value={password}
@@ -95,10 +90,10 @@ export default function Signup() {
           />
         </View>
 
-        <View style={styles.inputContainer}>
-          <Ionicons name="lock-closed-outline" size={20} color="#757575" style={styles.inputIcon} />
+        <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }]}>
+          <Ionicons name="lock-closed-outline" size={20} color={isDarkMode ? '#E0E0E0' : '#757575'} style={styles.inputIcon} />
           <TextInput
-            style={[styles.input, { color: isDarkMode ? '#FFF' : '#424242', backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }]}
+            style={[styles.input, { color: isDarkMode ? '#FFF' : '#424242' }]}
             placeholder="Confirm Password"
             placeholderTextColor="#9E9E9E"
             value={confirmPassword}
@@ -107,22 +102,14 @@ export default function Signup() {
           />
         </View>
 
-        <TouchableOpacity 
-          style={styles.signupButton}
-          onPress={handleSignup}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.signupButton} onPress={handleSignup} activeOpacity={0.8}>
           <Text style={styles.signupButtonText}>Sign Up</Text>
         </TouchableOpacity>
 
         <View style={styles.loginContainer}>
-          <Text style={[styles.loginText, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
-            Already have an account?{' '}
-          </Text>
+          <Text style={[styles.loginText, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>Already have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={[styles.loginLink, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-              Log In
-            </Text>
+            <Text style={[styles.loginLink, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>Log In</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -137,9 +124,20 @@ const styles = StyleSheet.create({
   title: { fontSize: 32, fontWeight: 'bold', marginBottom: 8 },
   subtitle: { fontSize: 16 },
   formContainer: { width: '100%' },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, borderRadius: 12, paddingHorizontal: 12, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
   inputIcon: { marginRight: 10 },
-  input: { flex: 1, paddingVertical: 14, fontSize: 16, borderRadius: 12 },
+  input: { flex: 1, paddingVertical: 14, fontSize: 16, borderRadius: 12, backgroundColor: 'transparent' },
   signupButton: { backgroundColor: '#B71C1C', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 10, marginBottom: 20 },
   signupButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
   loginContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },

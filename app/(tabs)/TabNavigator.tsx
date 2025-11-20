@@ -1,4 +1,3 @@
-// app/(tabs)/TabNavigator.tsx
 import React from 'react';
 import { useColorScheme } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -6,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Promos from './Promos';
 import FeedTab from './FeedTab';
 import FavoritesTab from './FavoritesTab';
-import AboutTab from './AboutTab';
+import LocationTab from './LocationTab';
 import { TabParamList } from '../types';
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -52,7 +51,7 @@ export default function TabNavigator() {
         component={FeedTab}
         options={{
           tabBarIcon: ({ color, size }) => <Ionicons name="restaurant" size={size} color={color} />,
-          tabBarLabel: 'Food Log',
+          tabBarLabel: 'Food',
         }}
       />
 
@@ -66,11 +65,11 @@ export default function TabNavigator() {
       />
 
       <Tab.Screen
-        name="About"
-        component={AboutTab}
+        name="Location"
+        component={LocationTab}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="information-circle" size={size} color={color} />,
-          tabBarLabel: 'About',
+          tabBarIcon: ({ color, size }) => <Ionicons name="location" size={size} color={color} />,
+          tabBarLabel: 'Location',
         }}
       />
     </Tab.Navigator>

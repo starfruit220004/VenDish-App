@@ -1,10 +1,9 @@
-// app/(tabs)/Promos.tsx
 import React, { useContext } from 'react';
 import { View, Text, Alert, ScrollView, Image, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
-import { AuthContext } from './MainDrawer'; // ✅ Only import from MainDrawer
+import { AuthContext } from './MainDrawer'; 
 
 const samplePromos = [
   { id: 1, title: '50% Off Halo-Halo', description: 'Get half off on Halo-Halo this summer!', image: require('../../assets/images/halohalo.jpg') },

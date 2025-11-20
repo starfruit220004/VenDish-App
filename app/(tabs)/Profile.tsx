@@ -13,7 +13,6 @@ export default function Profile() {
   const [editMode, setEditMode] = useState(false);
   const [profilePic, setProfilePic] = useState<string | null>(null);
 
-  // Update on system theme change
   useEffect(() => {
     setDarkMode(systemTheme === "dark");
   }, [systemTheme]);

@@ -1,4 +1,3 @@
-// app/types.ts
 export type RootStackParamList = {
   Tabs: undefined;
   Login: { redirect?: keyof TabParamList; promoTitle?: string } | undefined;
@@ -11,6 +10,7 @@ export type TabParamList = {
   Feed: undefined;
   Favorites: undefined;
   About: undefined;
+  Location: undefined;  
 };
 
 export type FeedStackParamList = {

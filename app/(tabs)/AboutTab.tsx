@@ -1,85 +1,184 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import {View,Text,StyleSheet,ScrollView,useColorScheme,Image,TouchableOpacity,Linking,} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from 'react-native';
 
-function AboutTab() {
+export default function AboutTab() {
   const scheme = useColorScheme();
-    const isDarkMode = scheme === 'dark';
+  const isDarkMode = scheme === 'dark';
+
+  const handleContact = (type: string) => {
+    switch (type) {
+      case 'phone':
+        Linking.openURL('tel:+631234567890');
+        break;
+      case 'email':
+        Linking.openURL('mailto:info@kuyavince.com');
+        break;
+    }
+  };
+
   return (
-    <ScrollView style={[styles.container, { backgroundColor: isDarkMode ? "#000" : "#FFEBEE" }]} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Text style={styles.icon}>🍱</Text>
-        <Text style={styles.title}>About Foodie Journal</Text>
+    <ScrollView
+      style={[
+        styles.container,
+        { backgroundColor: isDarkMode ? '#000000' : '#F5F5F5' },
+      ]}
+      contentContainerStyle={styles.contentContainer}
+    >
+      {/* Header Icon */}
+      <View style={styles.iconContainer}>
+        <Ionicons
+          name="restaurant"
+          size={80}
+          color={isDarkMode ? '#FF5252' : '#B71C1C'}
+        />
       </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.description, { color: isDarkMode ? "#8f675aff" : "#5D4037" }]}>
-          Welcome to <Text style={styles.bold}>Foodie Journal</Text>, your personal companion for
-          exploring and documenting your culinary adventures! This app helps you log meals,
-          discover new dishes, and curate your collection of favorite foods.
+      {/* Title */}
+      <Text
+        style={[
+          styles.title,
+          { color: isDarkMode ? '#FFFFFF' : '#212121' },
+        ]}
+      >
+        Kuya Vince Carenderia
+      </Text>
+
+      <Text
+        style={[
+          styles.subtitle,
+          { color: isDarkMode ? '#BDBDBD' : '#757575' },
+        ]}
+      >
+        Authentic Filipino Cuisine
+      </Text>
+
+      {/* About Section */}
+      <View
+        style={[
+          styles.section,
+          { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' },
+        ]}
+      >
+        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+          Our Story
+        </Text>
+        <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
+          Founded in 2015, Kuya Vince Carenderia has been serving delicious, homestyle Filipino meals to the community of Zamboanga. What started as a small family-run eatery has grown into a beloved local institution, known for our authentic recipes passed down through generations.
+        </Text>
+        <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242', marginTop: 12 }]}>
+          We pride ourselves on using fresh, locally-sourced ingredients and traditional cooking methods to bring you the taste of home-cooked Filipino comfort food.
         </Text>
       </View>
 
-      <View style={styles.featuresSection}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="sparkles" size={24} color="#E65100" />
-          <Text style={styles.sectionTitle}>Features</Text>
-        </View>
-        <View style={styles.featuresList}>
-          <View style={styles.featureItem}>
-            <View style={styles.bullet} />
-            <Text style={styles.featureText}>
-              Browse a curated collection of Filipino dishes
+      {/* Mission Section */}
+      <View
+        style={[
+          styles.section,
+          { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' },
+        ]}
+      >
+        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+          Our Mission
+        </Text>
+        <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
+          To serve affordable, delicious Filipino meals that bring families and friends together, while preserving and celebrating our rich culinary heritage.
+        </Text>
+      </View>
+
+      {/* Location Section */}
+      <View
+        style={[
+          styles.section,
+          { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' },
+        ]}
+      >
+        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+          <Ionicons name="location" size={20} /> Location
+        </Text>
+        <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
+          Zamboanga City{'\n'}
+          Zamboanga Peninsula{'\n'}
+          Philippines
+        </Text>
+      </View>
+
+      {/* Hours Section */}
+      <View
+        style={[
+          styles.section,
+          { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' },
+        ]}
+      >
+        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+          <Ionicons name="time" size={20} /> Operating Hours
+        </Text>
+        <View style={styles.hoursContainer}>
+          <View style={styles.hoursRow}>
+            <Text style={[styles.dayText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
+              Monday - Friday
+            </Text>
+            <Text style={[styles.timeText, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+              7:00 AM - 8:00 PM
             </Text>
           </View>
-          <View style={styles.featureItem}>
-            <View style={styles.bullet} />
-            <Text style={styles.featureText}>Save your favorite foods for quick access</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <View style={styles.bullet} />
-            <Text style={styles.featureText}>View detailed information and ratings</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.comingSoonSection}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="rocket" size={24} color="#B71C1C" />
-          <Text style={styles.sectionTitle}>Coming Soon</Text>
-        </View>
-        <View style={styles.featuresList}>
-          <View style={styles.featureItem}>
-            <View style={styles.bulletComing} />
-            <Text style={styles.featureText}>Nutrition tracker and calorie counter</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <View style={styles.bulletComing} />
-            <Text style={styles.featureText}>AI-powered food recognition</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <View style={styles.bulletComing} />
-            <Text style={styles.featureText}>Personalized meal planner</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <View style={styles.bulletComing} />
-            <Text style={styles.featureText}>Recipe sharing with the community</Text>
+          <View style={styles.hoursRow}>
+            <Text style={[styles.dayText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
+              Saturday - Sunday
+            </Text>
+            <Text style={[styles.timeText, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+              8:00 AM - 9:00 PM
+            </Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>This project is brought to you by:</Text>
+      {/* Contact Section */}
+      <View
+        style={[
+          styles.section,
+          { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' },
+        ]}
+      >
+        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+          Get In Touch
+        </Text>
         
+        <TouchableOpacity
+          style={styles.contactButton}
+          onPress={() => handleContact('phone')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="call" size={24} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
+          <Text style={[styles.contactText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
+            +63 123 456 7890
+          </Text>
+        </TouchableOpacity>
 
-        <View style={{ width: 60, height: 60, borderRadius: 100, marginBottom: 10 }}>
-          <Image source={require('../../assets/images/Logo.jpg')} style={{ width: '100%', height: '100%', borderRadius: 100 }} />
-        </View>
-
-        <Text style={styles.groupName}>Group 7 - GenTech</Text>
-        
+        <TouchableOpacity
+          style={styles.contactButton}
+          onPress={() => handleContact('email')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="mail" size={24} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
+          <Text style={[styles.contactText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
+            info@kuyavince.com
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {/* App Version */}
+      <View style={styles.versionContainer}>
+        <Text style={[styles.versionText, { color: isDarkMode ? '#757575' : '#9E9E9E' }]}>
+          App Version 1.0.0
+        </Text>
+        <Text style={[styles.versionText, { color: isDarkMode ? '#757575' : '#9E9E9E' }]}>
+          Made with ❤️ kahit pagod na.
+        </Text>
+      </View>
+
+      {/* Bottom Spacing */}
+      <View style={styles.bottomSpace} />
     </ScrollView>
   );
 }
@@ -87,107 +186,84 @@ function AboutTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF3E0',
   },
-  content: {
+  contentContainer: {
     padding: 20,
-    paddingBottom: 40,
   },
-  header: {
+  iconContainer: {
     alignItems: 'center',
-    marginBottom: 24,
-  },
-  icon: {
-    fontSize: 80,
-    marginBottom: 20,
+    marginVertical: 20,
   },
   title: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#E65100',
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+    fontStyle: 'italic',
   },
   section: {
-    marginBottom: 24,
-  },
-  description: {
-    fontSize: 16,
-    color: '#5D4037',
-    lineHeight: 24,
-    textAlign: 'center',
-  },
-  bold: {
-    fontWeight: 'bold',
-    color: '#E65100',
-  },
-  featuresSection: {
-    backgroundColor: '#FFE0B2',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-  },
-  comingSoonSection: {
-    backgroundColor: '#FFCDD2',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
     marginBottom: 16,
-    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#3E2723',
+    marginBottom: 12,
   },
-  featuresList: {
-    gap: 12,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  bullet: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E65100',
-    marginTop: 6,
-  },
-  bulletComing: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#B71C1C',
-    marginTop: 6,
-  },
-  featureText: {
-    flex: 1,
+  sectionText: {
     fontSize: 15,
-    color: '#4E342E',
     lineHeight: 22,
   },
-  footer: {
+  hoursContainer: {
+    marginTop: 8,
+  },
+  hoursRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#BCAAA4',
+    marginBottom: 8,
   },
-  footerText: {
-    fontSize: 14,
-    color: '#6D4C41',
-    marginBottom: 10,
-    marginTop: 5,
+  dayText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
-  groupName: {
-    fontSize: 24,
+  timeText: {
+    fontSize: 15,
     fontWeight: 'bold',
-    color: '#E65100',
-    paddingBottom: 10,
+  },
+  contactButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    gap: 12,
+  },
+  contactText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  versionContainer: {
+    alignItems: 'center',
+    marginTop: 24,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  versionText: {
+    fontSize: 12,
+    marginVertical: 2,
+  },
+  bottomSpace: {
+    height: 40,
   },
 });
-export default AboutTab;
