@@ -180,7 +180,7 @@ export default function FAQScreen() {
           </View>
         )}
 
-        {/* Contact Section */}
+        {/* Contact  */}
         <View style={[
           styles.contactSection,
           { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }

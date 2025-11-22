@@ -1,12 +1,5 @@
-// app/(tabs)/TermsAndConditions.tsx
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  useColorScheme,
-} from 'react-native';
+import {View,Text,StyleSheet,ScrollView,useColorScheme,} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function TermsAndConditions() {
@@ -21,7 +14,7 @@ export default function TermsAndConditions() {
       ]}
       contentContainerStyle={styles.contentContainer}
     >
-      {/* Header Icon */}
+      {/* Header*/}
       <View style={styles.iconContainer}>
         <Ionicons
           name="document-text"
@@ -49,7 +42,7 @@ export default function TermsAndConditions() {
         Last Updated: November 19, 2024
       </Text>
 
-      {/* 1. Acceptance */}
+      
       <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
         <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
           1. Acceptance of Terms
@@ -59,7 +52,7 @@ export default function TermsAndConditions() {
         </Text>
       </View>
 
-      {/* 2. Use of Service */}
+     
       <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
         <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
           2. Use of Service
@@ -69,7 +62,7 @@ export default function TermsAndConditions() {
         </Text>
       </View>
 
-      {/* 3. User Accounts */}
+      
       <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
         <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
           3. User Accounts
@@ -79,7 +72,7 @@ export default function TermsAndConditions() {
         </Text>
       </View>
 
-      {/* 7. Promotions — FIXED SECTION */}
+      
       <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
         <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
           4. Promotions and Discounts
@@ -89,7 +82,7 @@ export default function TermsAndConditions() {
         </Text>
       </View>
 
-      {/* 8. Food Safety */}
+      
       <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
         <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
           5. Food Safety and Allergies
@@ -99,7 +92,7 @@ export default function TermsAndConditions() {
         </Text>
       </View>
 
-      {/* 9. Intellectual Property */}
+     
       <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
         <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
           6. Intellectual Property
@@ -109,7 +102,7 @@ export default function TermsAndConditions() {
         </Text>
       </View>
 
-      {/* 10. Liability */}
+      
       <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
         <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
           7. Limitation of Liability
@@ -119,7 +112,7 @@ export default function TermsAndConditions() {
         </Text>
       </View>
 
-      {/* 8. Contact */}
+     
       <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
         <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
           8. Contact Information

@@ -1,4 +1,3 @@
-// app/(tabs)/Auth/ForgotPassword.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';

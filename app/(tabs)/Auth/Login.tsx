@@ -1,22 +1,23 @@
-// app/(tabs)/Auth/Login.tsx
 import React, { useContext, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, useColorScheme } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthContext } from '../MainDrawer';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthContext, UserData } from '../MainDrawer';
 
-// Drawer navigation types
 type DrawerParamList = {
   Tabs: undefined;
-  Login: { redirect?: string; promoTitle?: string } | undefined;
-  Signup: undefined;
+  Login: { redirect?: string; promoId?: string; promoTitle?: string } | undefined;
+  Signup: { redirect?: string; promoId?: string; promoTitle?: string } | undefined;
   ForgotPassword: undefined;
 };
 
 type LoginNavigationProp = DrawerNavigationProp<DrawerParamList, 'Login'>;
 type LoginRouteProp = RouteProp<DrawerParamList, 'Login'>;
+
+const USER_DATA_KEY = '@user_data';
 
 export default function Login() {
   const navigation = useNavigation<LoginNavigationProp>();
@@ -27,17 +28,59 @@ export default function Login() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    // Simulate login
-    login();
-    Alert.alert('Success', 'Logged in successfully!');
-    navigation.navigate('Tabs');
+    setIsLoading(true);
+    try {
+      // Get stored user data
+      const storedUserData = await AsyncStorage.getItem(USER_DATA_KEY);
+      
+      if (!storedUserData) {
+        Alert.alert('Error', 'No account found. Please sign up first.');
+        setIsLoading(false);
+        return;
+      }
+
+      const userData: UserData = JSON.parse(storedUserData);
+
+      // Simple validation (in production, this should be done on backend)
+      if (userData.email.toLowerCase() !== email.trim().toLowerCase()) {
+        Alert.alert('Error', 'Invalid email or password');
+        setIsLoading(false);
+        return;
+      }
+
+      // Login the user
+      await login(userData);
+      
+      // Check if user was redirected from promo claiming
+      const { redirect, promoId, promoTitle } = route.params || {};
+      
+      if (redirect === 'promo-claim' && promoId) {
+        // Auto-claim the promo after login
+        Alert.alert(
+          'Success! 🎉', 
+          `Welcome back ${userData.username}!\n\nYou have claimed: ${promoTitle}`,
+          [{ text: 'OK', onPress: () => navigation.navigate('Tabs') }]
+        );
+      } else {
+        Alert.alert(
+          'Success! 🎉',
+          `Welcome back ${userData.username}!`,
+          [{ text: 'OK', onPress: () => navigation.navigate('Tabs') }]
+        );
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -62,6 +105,7 @@ export default function Login() {
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
+            editable={!isLoading}
           />
         </View>
 
@@ -74,20 +118,26 @@ export default function Login() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            editable={!isLoading}
           />
         </View>
 
-        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} disabled={isLoading}>
           <Text style={[styles.forgotPassword, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>Forgot Password?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin} activeOpacity={0.8}>
-          <Text style={styles.loginButtonText}>Log In</Text>
+        <TouchableOpacity 
+          style={[styles.loginButton, isLoading && styles.loginButtonDisabled]} 
+          onPress={handleLogin} 
+          activeOpacity={0.8}
+          disabled={isLoading}
+        >
+          <Text style={styles.loginButtonText}>{isLoading ? 'Logging in...' : 'Log In'}</Text>
         </TouchableOpacity>
 
         <View style={styles.signupContainer}>
           <Text style={[styles.signupText, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+          <TouchableOpacity onPress={() => navigation.navigate('Signup')} disabled={isLoading}>
             <Text style={[styles.signupLink, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>Sign Up</Text>
           </TouchableOpacity>
         </View>
@@ -119,6 +169,7 @@ const styles = StyleSheet.create({
   input: { flex: 1, paddingVertical: 14, fontSize: 16, borderRadius: 12, backgroundColor: 'transparent' },
   forgotPassword: { fontSize: 14, textAlign: 'right', marginBottom: 24, fontWeight: '600' },
   loginButton: { backgroundColor: '#B71C1C', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginBottom: 20 },
+  loginButtonDisabled: { opacity: 0.6 },
   loginButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
   signupContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   signupText: { fontSize: 14 },

@@ -6,7 +6,15 @@ import Promos from './Promos';
 import FeedTab from './FeedTab';
 import FavoritesTab from './FavoritesTab';
 import LocationTab from './LocationTab';
-import { TabParamList } from '../types';
+import ShopReviewsTab from './ShopReviewsTab';
+
+type TabParamList = {
+  Promos: undefined;
+  Feed: undefined;
+  Favorites: undefined;
+  Location: undefined;
+  ShopReviews: undefined;
+};
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
@@ -33,7 +41,7 @@ export default function TabNavigator() {
           shadowOpacity: 0.1,
           shadowRadius: 4,
         },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '600', marginTop: 4 },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 4 },
         headerShown: false,
       }}
     >
@@ -70,6 +78,15 @@ export default function TabNavigator() {
         options={{
           tabBarIcon: ({ color, size }) => <Ionicons name="location" size={size} color={color} />,
           tabBarLabel: 'Location',
+        }}
+      />
+
+      <Tab.Screen
+        name="ShopReviews"
+        component={ShopReviewsTab}
+        options={{
+          tabBarIcon: ({ color, size }) => <Ionicons name="star" size={size} color={color} />,
+          tabBarLabel: 'Reviews',
         }}
       />
     </Tab.Navigator>

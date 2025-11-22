@@ -2,30 +2,18 @@ import React, { useState, useContext } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, useColorScheme, Modal, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useReviews } from './ReviewsContext';
 import { AuthContext } from './MainDrawer';
 
-// Define Food type 
-type Food = {
-  id: number;
-  name: string;
-  description: string;
-  image: any;
-  category: string;
+type WriteShopReviewProps = {
+  navigation: any;
+  route?: any;
 };
 
-type FeedStackParamList = {
-  WriteReview: { food: Food };
-};
-
-type Props = NativeStackScreenProps<FeedStackParamList, "WriteReview">;
-
-export default function WriteReview({ route, navigation }: Props) {
-  const { food } = route.params;
+export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
-  const { addFoodReview } = useReviews();
+  const { addShopReview } = useReviews();
   const { isLoggedIn, userData } = useContext(AuthContext);
 
   const [review, setReview] = useState("");
@@ -63,8 +51,7 @@ export default function WriteReview({ route, navigation }: Props) {
 
     setIsSubmitting(true);
     try {
-      await addFoodReview({
-        foodId: food.id,
+      await addShopReview({
         username: userData.username,
         rating,
         review: review.trim(),
@@ -103,7 +90,7 @@ export default function WriteReview({ route, navigation }: Props) {
           <Ionicons name="arrow-back" size={26} color={isDarkMode ? '#FFFFFF' : '#B71C1C'} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          Write Review
+          Review Shop
         </Text>
         <View style={{ width: 40 }} />
       </View>
@@ -113,15 +100,15 @@ export default function WriteReview({ route, navigation }: Props) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Food Info Card */}
-        <View style={[styles.foodCard, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
-          <Image source={food.image} style={styles.foodImage} />
-          <View style={styles.foodInfo}>
-            <Text style={[styles.foodName, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-              {food.name}
+        {/* Shop Info Card */}
+        <View style={[styles.shopCard, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
+          <Ionicons name="restaurant" size={64} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
+          <View style={styles.shopInfo}>
+            <Text style={[styles.shopName, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+              Kuya Vince Carenderia
             </Text>
-            <Text style={[styles.foodCategory, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
-              {food.category}
+            <Text style={[styles.shopDesc, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
+              Share your experience with our shop
             </Text>
           </View>
         </View>
@@ -168,7 +155,7 @@ export default function WriteReview({ route, navigation }: Props) {
                 borderColor: isDarkMode ? '#424242' : '#E0E0E0'
               }
             ]}
-            placeholder="What did you think about this dish?"
+            placeholder="Tell us about your experience at our shop..."
             placeholderTextColor={isDarkMode ? '#757575' : '#9E9E9E'}
             multiline
             value={review}
@@ -283,33 +270,28 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
-  foodCard: {
+  shopCard: {
     flexDirection: 'row',
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     marginBottom: 20,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    alignItems: 'center',
   },
-  foodImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-  },
-  foodInfo: {
+  shopInfo: {
     flex: 1,
     marginLeft: 16,
-    justifyContent: 'center',
   },
-  foodName: {
-    fontSize: 18,
+  shopName: {
+    fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 4,
   },
-  foodCategory: {
+  shopDesc: {
     fontSize: 14,
   },
   section: {

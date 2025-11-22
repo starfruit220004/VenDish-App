@@ -1,12 +1,6 @@
-// app/(tabs)/PrivacyPolicy.tsx
+
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  useColorScheme,
-} from 'react-native';
+import {View,Text,StyleSheet,ScrollView,useColorScheme,} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function PrivacyPolicy() {

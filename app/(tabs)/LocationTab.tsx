@@ -1,4 +1,3 @@
-// app/(tabs)/LocationTab.tsx
 import React from 'react';
 import { View, Text, StyleSheet, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +7,7 @@ export default function LocationTab() {
   const isDark = scheme === 'dark';
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? "#121212" : "#F5F5F5" }]}>
+    <View style={[styles.container, { backgroundColor: isDark ? "#000" : "#FFEBEE" }]}>
       
       {/* Header */}
       <Text style={[styles.headerTitle, { color: isDark ? "#FFFFFF" : "#B71C1C" }]}>
@@ -33,8 +32,7 @@ export default function LocationTab() {
           </Text>
 
           <Text style={[styles.cardSubtitle, { color: isDark ? "#BDBDBD" : "#616161" }]}>
-            Purok 3, Barangay Sample  
-            City of Good Taste, Philippines
+            Purok 3, Baliwasan, Philippines
           </Text>
         </View>
       </View>
@@ -63,7 +61,8 @@ const styles = StyleSheet.create({
     flex: 1, 
     alignItems: "center", 
     paddingTop: 40,
-    paddingHorizontal: 16 
+    paddingHorizontal: 16,
+    backgroundColor: '#FFEBEE' 
   },
 
   headerTitle: {

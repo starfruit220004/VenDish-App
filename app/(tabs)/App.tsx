@@ -1,11 +1,14 @@
 import React from 'react';
 import MainDrawer from './MainDrawer';
 import { FavoritesProvider } from './FavoritesContext';
+import { ReviewsProvider } from './ReviewsContext';
 
 export default function App() {
   return (
-    <FavoritesProvider>
-      <MainDrawer />
-    </FavoritesProvider>
+    <ReviewsProvider>
+      <FavoritesProvider>
+        <MainDrawer />
+      </FavoritesProvider>
+    </ReviewsProvider>
   );
 }

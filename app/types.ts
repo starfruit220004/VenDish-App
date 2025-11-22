@@ -1,16 +1,16 @@
-export type RootStackParamList = {
-  Tabs: undefined;
-  Login: { redirect?: keyof TabParamList; promoTitle?: string } | undefined;
-  Signup: undefined;
-  ForgotPassword: undefined;
-};
-
 export type TabParamList = {
   Promos: undefined;
   Feed: undefined;
   Favorites: undefined;
   About: undefined;
   Location: undefined;  
+};
+
+export type RootStackParamList = {
+  Tabs: undefined;
+  Login: { redirect?: keyof TabParamList; promoTitle?: string } | undefined;
+  Signup: { redirect?: keyof TabParamList; promoTitle?: string } | undefined;
+  ForgotPassword: undefined;
 };
 
 export type FeedStackParamList = {
