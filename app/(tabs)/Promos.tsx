@@ -182,7 +182,7 @@ export default function Promos() {
     >
       <View style={styles.headerContainer}>
         <Text style={[styles.header, { color: isDarkMode ? '#FFF' : '#B71C1C' }]}>
-          🎉 Current Promos
+          🎉 Available Promos
         </Text>
         <Text style={[styles.subheader, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
           {isLoggedIn 
