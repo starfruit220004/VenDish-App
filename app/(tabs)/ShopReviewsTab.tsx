@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 5,
   },
   title: {
     fontSize: 28,

@@ -11,14 +11,14 @@ import FoodDetail from './FoodDetail';
 import { Food, FeedStackParamList } from '../types';
 
 const sampleFoods: Food[] = [
-  { id: 1, name: 'Chicken Adobo', description: 'Classic Filipino dish with soy sauce and vinegar', image: require('../../assets/images/adobo.jpg'), category: 'Main Course', price: 120, stock: 15 },
-  { id: 2, name: 'Pancit Canton', description: 'Stir-fried noodles with vegetables', image: require('../../assets/images/pancit-canton.jpg'), category: 'Noodles', price: 80, stock: 20 },
-  { id: 3, name: 'Lumpia', description: 'Filipino spring rolls', image: require('../../assets/images/lumpia.jpg'), category: 'Appetizer', price: 60, stock: 25 },
-  { id: 4, name: 'Sinigang', description: 'Sour tamarind soup', image: require('../../assets/images/sinigang.jpg'), category: 'Soup', price: 110, stock: 12 },
-  { id: 5, name: 'Tinola', description: 'Filipino chicken ginger soup', image: require('../../assets/images/tinola.jpg'), category: 'Main Course', price: 100, stock: 18 },
-  { id: 6, name: 'Halo-Halo', description: 'Mixed dessert with shaved ice', image: require('../../assets/images/halohalo.jpg'), category: 'Dessert', price: 75, stock: 30 },
-  { id: 7, name: 'Siomai', description: 'Filipino-style steamed dumpling', image: require('../../assets/images/siomai.jpg'), category: 'Appetizer', price: 50, stock: 40 },
-  { id: 8, name: 'Leche Flan', description: 'Rich and creamy Filipino caramel custard dessert', image: require('../../assets/images/leche.jpg'), category: 'Dessert', price: 65, stock: 22 },
+  { id: 1, name: 'Chicken Adobo', description: '', image: require('../../assets/images/adobo.jpg'), category: 'Chicken', price: 120, stock: 15 },
+  { id: 2, name: 'Monggo', description: '', image: require('../../assets/images/monggo.jpg'), category: 'Vegetables', price: 80, stock: 20 },
+  { id: 3, name: 'Paklay', description: '', image: require('../../assets/images/paklay.jpg'), category: 'Beef', price: 60, stock: 25 },
+  { id: 4, name: 'Sayote', description: '', image: require('../../assets/images/sayote.jpg'), category: 'Vegetables', price: 110, stock: 12 },
+  { id: 5, name: 'Chicken Curry', description: '', image: require('../../assets/images/chickencurry.jpg'), category: 'Chicken', price: 100, stock: 18 },
+  { id: 6, name: 'Tinolang Isda', description: '', image: require('../../assets/images/fishsoup.jpg'), category: 'Fish', price: 75, stock: 30 },
+  { id: 7, name: 'Fried Chicken', description: '', image: require('../../assets/images/friedchicken.jpg'), category: 'Chicken', price: 50, stock: 40 },
+  { id: 8, name: 'Beef Tapa', description: '', image: require('../../assets/images/beeftapa.jpg'), category: 'Beef', price: 65, stock: 22 },
 ];
 
 function FeedHome({ navigation }: any) {
@@ -39,7 +39,7 @@ function FeedHome({ navigation }: any) {
     }, [refreshReviews])
   );
 
-  const categories = ['All', 'Main Course', 'Noodles', 'Appetizer', 'Soup', 'Dessert'];
+  const categories = ['All', 'Beef', 'Chicken', 'Fish', 'Vegetables'];
 
   const filteredFoods = sampleFoods.filter(food => {
     const matchesSearch = food.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -70,8 +70,12 @@ function FeedHome({ navigation }: any) {
       contentContainerStyle={styles.scrollContent}
     >
       <View style={styles.header}>
+        <Image 
+          source={require('../../assets/images/Logo2.jpg')} 
+          style={styles.headerLogo}
+        />
         <Text style={[styles.title, { color: isDarkMode ? '#FFFFFF' : '#B71C1C' }]}>
-          🍽️ Kuya Vince Carenderia
+          Kuya Vince Carenderia
         </Text>
         <Text style={[styles.subtitle, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
           Discover your favorite Filipino dishes
@@ -178,7 +182,7 @@ function FeedHome({ navigation }: any) {
                 >
                   {food.name}
                 </Text>
-                <Text
+                {/* <Text
                   style={[
                     styles.foodDesc,
                     { color: isDarkMode ? '#BDBDBD' : '#616161' }
@@ -186,7 +190,7 @@ function FeedHome({ navigation }: any) {
                   numberOfLines={2}
                 >
                   {food.description}
-                </Text>
+                </Text> */}
                 
                 <View style={styles.priceStockContainer}>
                   <View style={styles.priceContainer}>
@@ -207,7 +211,7 @@ function FeedHome({ navigation }: any) {
                   </View>
                 </View>
 
-                <View style={styles.cardFooter}>
+                {/* <View style={styles.cardFooter}>
                   {hasReviews ? (
                     <>
                       {renderStars(avgRating)}
@@ -220,7 +224,7 @@ function FeedHome({ navigation }: any) {
                       No reviews yet
                     </Text>
                   )}
-                </View>
+                </View> */}
               </View>
             </TouchableOpacity>
           );
@@ -262,7 +266,13 @@ export default function FeedTab() {
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: 10, paddingBottom: 30 },
-  header: { alignItems: 'center', marginVertical: 20 },
+  header: { alignItems: 'center', marginVertical: 5 },
+  headerLogo: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 12,
+  },
   title: { fontSize: 28, fontWeight: 'bold', marginBottom: 8 },
   subtitle: { fontSize: 14, marginBottom: 16 },
   

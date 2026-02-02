@@ -1,12 +1,11 @@
 import React, { useState, useContext } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, useColorScheme, Modal, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, useColorScheme, Modal } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useReviews } from './ReviewsContext';
-import { AuthContext } from './MainDrawer';
+import { AuthContext } from '../context/AuthContext';
 
-// Define Food type 
 type Food = {
   id: number;
   name: string;
@@ -33,6 +32,8 @@ export default function WriteReview({ route, navigation }: Props) {
   const [media, setMedia] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const pickMedia = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -48,16 +49,19 @@ export default function WriteReview({ route, navigation }: Props) {
 
   const handleSubmit = async () => {
     if (!isLoggedIn || !userData) {
-      Alert.alert('Error', 'You must be logged in to submit a review');
+      setErrorMessage('You must be logged in to submit a review');
+      setErrorModalVisible(true);
       return;
     }
 
     if (rating === 0) {
-      Alert.alert("Error", "Please select a rating!");
+      setErrorMessage('Please select a rating!');
+      setErrorModalVisible(true);
       return;
     }
     if (review.trim() === "") {
-      Alert.alert("Error", "Please write a review!");
+      setErrorMessage('Please write a review!');
+      setErrorModalVisible(true);
       return;
     }
 
@@ -81,7 +85,8 @@ export default function WriteReview({ route, navigation }: Props) {
         navigation.goBack();
       }, 2000);
     } catch (error) {
-      Alert.alert("Error", "Failed to submit review. Please try again.");
+      setErrorMessage('Failed to submit review. Please try again.');
+      setErrorModalVisible(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -238,13 +243,38 @@ export default function WriteReview({ route, navigation }: Props) {
             styles.modalBox,
             { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }
           ]}>
-            <Ionicons name="checkmark-circle" size={64} color="#4CAF50" />
+            <Ionicons name="checkmark-circle" size={64} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
             <Text style={[styles.modalTitle, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
               Review Submitted!
             </Text>
             <Text style={[styles.modalText, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
               Thank you for sharing your experience
             </Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal visible={errorModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.modalBox,
+            { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }
+          ]}>
+            <Ionicons name="alert-circle" size={64} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
+            <Text style={[styles.modalTitle, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
+              Error
+            </Text>
+            <Text style={[styles.modalText, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
+              {errorMessage}
+            </Text>
+            <TouchableOpacity 
+              style={[styles.modalButton, { backgroundColor: '#B71C1C' }]}
+              onPress={() => setErrorModalVisible(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -261,8 +291,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingTop: 50,
+    paddingVertical: 5,
+    paddingTop: 10,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -432,6 +462,19 @@ const styles = StyleSheet.create({
   },
   modalText: {
     fontSize: 16,
+    textAlign: 'center',
+  },
+  modalButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    borderRadius: 12,
+    minWidth: 120,
+    marginTop: 16,
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
     textAlign: 'center',
   },
 });

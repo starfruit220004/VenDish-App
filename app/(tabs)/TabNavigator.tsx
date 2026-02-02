@@ -7,6 +7,7 @@ import FeedTab from './FeedTab';
 import FavoritesTab from './FavoritesTab';
 import LocationTab from './LocationTab';
 import ShopReviewsTab from './ShopReviewsTab';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type TabParamList = {
   Promos: undefined;
@@ -34,7 +35,7 @@ export default function TabNavigator() {
           borderTopColor: isDarkMode ? '#2C2C2E' : '#E0E0E0',
           height: 90,
           paddingBottom: 8,
-          paddingTop: 8,
+          // paddingTop: 8,
           elevation: 8,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },

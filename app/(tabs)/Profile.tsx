@@ -2,18 +2,21 @@ import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, useColorScheme, Alert, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthContext } from './MainDrawer';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Profile() {
   const systemTheme = useColorScheme();
   const [darkMode, setDarkMode] = useState(systemTheme === "dark");
   const { userData, updateUserData, isLoggedIn } = useContext(AuthContext);
 
+  const [firstname, setFirstname] = useState('');
+  const [lastname, setLastname] = useState('');
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [profilePic, setProfilePic] = useState<string | null>(null);
+  const [phone, setPhone] = useState('')
 
   useEffect(() => {
     setDarkMode(systemTheme === "dark");
@@ -22,10 +25,14 @@ export default function Profile() {
   // Load user data when component mounts
   useEffect(() => {
     if (userData) {
-      setUsername(userData.username);
-      setEmail(userData.email);
-      setPhone(userData.phone);
-      setProfilePic(userData.profilePic || null);
+      // ✅ FIX: Use ?? '' to ensure valid strings
+      setFirstname(userData.firstname ?? '');
+      setLastname(userData.lastname ?? '');
+      setUsername(userData.username ?? ""); 
+      setEmail(userData.email ?? "");
+      setPhone(userData.phone ?? '');
+      setAddress(userData.address ?? '');
+      setProfilePic(userData.profilePic ?? null);
     }
   }, [userData]);
 
@@ -68,30 +75,25 @@ export default function Profile() {
   const saveChanges = async () => {
     
     // Validation
-    if (!username.trim() || !email.trim() || !phone.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!firstname.trim() || !lastname.trim() || !username.trim() || !email.trim()) {
+      Alert.alert('Error', 'Please fill in required fields (First Name, Last Name, Username, Email)');
       return;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
-    // Phone validation
-    const phoneRegex = /^(\+63|0)?[0-9]{10}$/;
-    if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
-      Alert.alert('Error', 'Please enter a valid phone number');
-      return;
-    }
-
     try {
       const updatedData = {
+        firstname: firstname.trim(),
+        lastname: lastname.trim(),
         username: username.trim(),
         email: email.trim().toLowerCase(),
-        phone: phone.trim(),
+        phone: phone,
+        address: address,
         profilePic: profilePic || undefined,
       };
 
@@ -104,13 +106,17 @@ export default function Profile() {
   };
 
   const cancelEdit = () => {
-    // Restore original data
+    // Restore original data safely
     if (userData) {
-      setUsername(userData.username);
-      setEmail(userData.email);
-      setPhone(userData.phone);
-      setProfilePic(userData.profilePic || null);
+      setFirstname(userData.firstname ?? '');
+      setLastname(userData.lastname ?? '');
+      setUsername(userData.username ?? "");
+      setEmail(userData.email ?? "");
+      setPhone(userData.phone ?? '');
+      setAddress(userData.address ?? '');
+      setProfilePic(userData.profilePic ?? null);
     }
+
     setEditMode(false);
   };
 
@@ -131,6 +137,12 @@ export default function Profile() {
     );
   }
 
+  // Get initials for avatar
+  const getInitials = () => {
+    const first = firstname.charAt(0).toUpperCase();
+    return first ? `${first}` : username.charAt(0).toUpperCase();
+  };
+
   return (
     <ScrollView 
       style={[styles.container, darkMode ? styles.darkBg : styles.lightBg]}
@@ -145,8 +157,8 @@ export default function Profile() {
         {profilePic ? (
           <Image source={{ uri: profilePic }} style={styles.profileImage} />
         ) : (
-          <View style={[styles.profileImagePlaceholder, { backgroundColor: darkMode ? '#333' : '#E0E0E0' }]}>
-            <Ionicons name="person" size={60} color={darkMode ? '#757575' : '#9E9E9E'} />
+          <View style={[styles.profileImagePlaceholder, { backgroundColor: darkMode ? '#B71C1C' : '#FF5252' }]}>
+            <Text style={styles.initialsText}>{getInitials()}</Text>
           </View>
         )}
         {editMode && (
@@ -156,18 +168,74 @@ export default function Profile() {
         )}
       </TouchableOpacity>
       
+      {/* Display Full Name and Username */}
+      <View style={styles.nameContainer}>
+        <Text style={[styles.fullNameText, darkMode ? styles.textLight : styles.textDark]}>
+          {firstname} {lastname}
+        </Text>
+        <Text style={[styles.usernameDisplayText, { color: darkMode ? '#BDBDBD' : '#757575' }]}>
+          @{username}
+        </Text>
+      </View>
+      
       {editMode && (
         <Text style={[styles.changePhotoText, { color: darkMode ? '#FF5252' : '#B71C1C' }]}>
-          Tap to change photo
+          Tap photo to change
         </Text>
       )}
 
       {/* Info Cards */}
       <View style={styles.infoContainer}>
-        {/* Username */}
+        {/* First Name */}
         <View style={[styles.infoCard, darkMode ? styles.cardDark : styles.cardLight]}>
           <View style={styles.infoHeader}>
             <Ionicons name="person-outline" size={20} color={darkMode ? '#FF5252' : '#B71C1C'} />
+            <Text style={[styles.label, darkMode ? styles.textLight : styles.textDark]}>
+              First Name
+            </Text>
+          </View>
+          <TextInput
+            editable={editMode}
+            value={firstname}
+            onChangeText={setFirstname}
+            style={[
+              styles.input, 
+              darkMode ? styles.inputDark : styles.inputLight,
+              !editMode && styles.inputDisabled
+            ]}
+            placeholder="Enter first name"
+            placeholderTextColor="#9E9E9E"
+            autoCapitalize="words"
+          />
+        </View>
+
+        {/* Last Name */}
+        <View style={[styles.infoCard, darkMode ? styles.cardDark : styles.cardLight]}>
+          <View style={styles.infoHeader}>
+            <Ionicons name="person-outline" size={20} color={darkMode ? '#FF5252' : '#B71C1C'} />
+            <Text style={[styles.label, darkMode ? styles.textLight : styles.textDark]}>
+              Last Name
+            </Text>
+          </View>
+          <TextInput
+            editable={editMode}
+            value={lastname}
+            onChangeText={setLastname}
+            style={[
+              styles.input, 
+              darkMode ? styles.inputDark : styles.inputLight,
+              !editMode && styles.inputDisabled
+            ]}
+            placeholder="Enter last name"
+            placeholderTextColor="#9E9E9E"
+            autoCapitalize="words"
+          />
+        </View>
+
+        {/* Username */}
+        <View style={[styles.infoCard, darkMode ? styles.cardDark : styles.cardLight]}>
+          <View style={styles.infoHeader}>
+            <Ionicons name="at-outline" size={20} color={darkMode ? '#FF5252' : '#B71C1C'} />
             <Text style={[styles.label, darkMode ? styles.textLight : styles.textDark]}>
               Username
             </Text>
@@ -183,6 +251,7 @@ export default function Profile() {
             ]}
             placeholder="Enter username"
             placeholderTextColor="#9E9E9E"
+            autoCapitalize="none"
           />
         </View>
 
@@ -232,6 +301,28 @@ export default function Profile() {
             keyboardType="phone-pad"
           />
         </View>
+
+        <View style={[styles.infoCard, darkMode ? styles.cardDark : styles.cardLight]}>
+          <View style={styles.infoHeader}>
+            <Ionicons name="location-outline" size={20} color={darkMode ? '#FF5252' : '#B71C1C'} />
+            <Text style={[styles.label, darkMode ? styles.textLight : styles.textDark]}>
+              Address
+            </Text>
+          </View>
+          <TextInput
+            editable={editMode}
+            value={address}
+            onChangeText={setAddress}
+            style={[
+              styles.input, 
+              darkMode ? styles.inputDark : styles.inputLight,
+              !editMode && styles.inputDisabled
+            ]}
+            placeholder="Enter Address"
+            placeholderTextColor="#9E9E9E"
+          />
+        </View>
+
       </View>
 
       {/* Buttons */}
@@ -309,6 +400,12 @@ const styles = StyleSheet.create({
     borderColor: '#B71C1C',
   },
 
+  initialsText: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+
   cameraIconContainer: {
     position: 'absolute',
     bottom: 15,
@@ -319,11 +416,27 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
+  nameContainer: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  fullNameText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+
+  usernameDisplayText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+
   changePhotoText: {
     textAlign: "center",
-    marginBottom: 30,
-    fontSize: 14,
-    fontWeight: '600',
+    marginBottom: 20,
+    fontSize: 12,
+    fontWeight: '500',
   },
 
   infoContainer: {
