@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, useColorScheme, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -10,7 +11,13 @@ const Stack = createNativeStackNavigator();
 function ShopReviewsHome({ navigation }: any) {
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
-  const { shopReviews, getAverageShopRating } = useReviews();
+  const { shopReviews, getAverageShopRating, refreshReviews } = useReviews();
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshReviews();
+    }, [])
+  );
   
   const [showAllReviews, setShowAllReviews] = useState(false);
   const averageRating = getAverageShopRating();

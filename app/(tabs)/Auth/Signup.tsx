@@ -53,8 +53,9 @@ export default function Signup() {
 
     setIsLoading(true);
     try {
-      // 1. CALL BACKEND WITH SEPARATE NAMES
-      const response = await api.post('/firstapp/user/register/', {
+      // 1. REGISTER THE USER
+      // This creates the account but does NOT return tokens
+      await api.post('/firstapp/user/register/', {
         username: username,
         email: email,
         password: password,
@@ -62,8 +63,14 @@ export default function Signup() {
         last_name: lastName    
       });
 
-      // 2. GET TOKENS
-      const { access, refresh } = response.data;
+      // 2. LOGIN IMMEDIATELY TO GET TOKENS
+      // We use the same credentials the user just entered
+      const loginResponse = await api.post('/firstapp/token/', {
+        username: username,
+        password: password
+      });
+
+      const { access, refresh } = loginResponse.data;
 
       // 3. APPLY FIX: Use TemporaryUserData type
       const userData: TemporaryUserData = {
@@ -73,7 +80,7 @@ export default function Signup() {
         email: email.trim().toLowerCase(),
       };
 
-      // 4. LOGIN
+      // 4. LOGIN CONTEXT
       await login(userData, access, refresh);
 
     } catch (error: any) {

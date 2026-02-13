@@ -56,6 +56,8 @@ export default function Promos() {
         status: item.status || 'Active', 
         description: item.description || `Enjoy this exclusive ${item.name} deal!`,
         terms: item.terms || 'Valid for dine-in only. One use per customer.',
+        // ✅ ADDED: Explicitly map expiration from backend structure
+        expiration: item.criteria_details?.valid_to || item.valid_to
       }));
 
       setPromos(formattedData);
@@ -155,7 +157,8 @@ export default function Promos() {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'No Expiry';
     const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };

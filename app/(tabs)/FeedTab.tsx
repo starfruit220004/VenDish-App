@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Dimensions, Modal, TextInput, useColorScheme } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Dimensions, TextInput, useColorScheme, ActivityIndicator } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,17 +9,7 @@ import WriteReview from './WriteReview';
 import WriteShopReview from './WriteShopReview';
 import FoodDetail from './FoodDetail';
 import { Food, FeedStackParamList } from '../types';
-
-const sampleFoods: Food[] = [
-  { id: 1, name: 'Chicken Adobo', description: '', image: require('../../assets/images/adobo.jpg'), category: 'Chicken', price: 120, stock: 15 },
-  { id: 2, name: 'Monggo', description: '', image: require('../../assets/images/monggo.jpg'), category: 'Vegetables', price: 80, stock: 20 },
-  { id: 3, name: 'Paklay', description: '', image: require('../../assets/images/paklay.jpg'), category: 'Beef', price: 60, stock: 25 },
-  { id: 4, name: 'Sayote', description: '', image: require('../../assets/images/sayote.jpg'), category: 'Vegetables', price: 110, stock: 12 },
-  { id: 5, name: 'Chicken Curry', description: '', image: require('../../assets/images/chickencurry.jpg'), category: 'Chicken', price: 100, stock: 18 },
-  { id: 6, name: 'Tinolang Isda', description: '', image: require('../../assets/images/fishsoup.jpg'), category: 'Fish', price: 75, stock: 30 },
-  { id: 7, name: 'Fried Chicken', description: '', image: require('../../assets/images/friedchicken.jpg'), category: 'Chicken', price: 50, stock: 40 },
-  { id: 8, name: 'Beef Tapa', description: '', image: require('../../assets/images/beeftapa.jpg'), category: 'Beef', price: 65, stock: 22 },
-];
+import api from '../../api/api'; 
 
 function FeedHome({ navigation }: any) {
   const { isFavorite } = useFavorites();
@@ -28,41 +18,66 @@ function FeedHome({ navigation }: any) {
   const isDarkMode = scheme === 'dark';
   const cardWidth = (Dimensions.get('window').width - 30) / 2;
 
+  const [foods, setFoods] = useState<Food[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState('All');
   const [showFilter, setShowFilter] = React.useState(false);
 
+  const fetchFoods = async () => {
+    try {
+      const response = await api.get('/firstapp/products/');
+      
+      const mappedFoods = response.data.map((item: any) => ({
+        id: item.id, 
+        name: item.product_name,
+        description: item.description || `Delicious ${item.category} dish`, 
+        image: item.image ? { uri: item.image } : require('../../assets/images/Logo2.jpg'),
+        category: item.category,
+        price: Number(item.price),
+        // ✅ CHANGED: Map 'is_available' from backend to 'isAvailable'
+        isAvailable: item.is_available 
+      }));
+
+      setFoods(mappedFoods);
+    } catch (error) {
+      console.error("Failed to fetch foods:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
-      console.log('FeedHome focused, refreshing reviews...');
       refreshReviews();
+      fetchFoods(); 
     }, [refreshReviews])
   );
 
-  const categories = ['All', 'Beef', 'Chicken', 'Fish', 'Vegetables'];
+  const categories = ['All', 'Beef', 'Chicken', 'Fish', 'Vegetables', 'Combo Meal', 'Value Meal', 'Add-on', 'Others'];
 
-  const filteredFoods = sampleFoods.filter(food => {
+  const filteredFoods = foods.filter(food => {
     const matchesSearch = food.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || food.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const renderStars = (rating: number) => {
-    const displayRating = Math.round(rating);
-    return (
-      <View style={styles.starsContainer}>
-        {[...Array(5)].map((_, i) => (
-          <Ionicons key={i} name={i < displayRating ? 'star' : 'star-outline'} size={14} color="#FFC107" />
-        ))}
-      </View>
-    );
+  // ✅ CHANGED: Logic to determine status text and color
+  const getStatusDisplay = (isAvailable: boolean) => {
+    if (isAvailable) {
+      return { text: 'Available', color: '#4CAF50' }; // Green
+    }
+    return { text: 'Unavailable', color: '#F44336' }; // Red
   };
 
-  const getStockStatus = (stock: number) => {
-    if (stock === 0) return { text: 'Out of Stock', color: '#F44336' };
-    if (stock < 10) return { text: 'Low Stock', color: '#FF9800' };
-    return { text: 'In Stock', color: '#4CAF50' };
-  };
+  if (isLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: isDarkMode ? '#000' : '#FFEBEE' }]}>
+        <ActivityIndicator size="large" color="#B71C1C" />
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -114,6 +129,7 @@ function FeedHome({ navigation }: any) {
           styles.filterDropdown,
           { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }
         ]}>
+          <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 5}}>
           {categories.map(cat => (
             <TouchableOpacity
               key={cat}
@@ -135,14 +151,14 @@ function FeedHome({ navigation }: any) {
               </Text>
             </TouchableOpacity>
           ))}
+          </View>
         </View>
       )}
 
       <View style={styles.row}>
         {filteredFoods.map(food => {
-          const avgRating = getAverageFoodRating(food.id);
-          const hasReviews = avgRating > 0;
-          const stockStatus = getStockStatus(food.stock);
+          // ✅ CHANGED: Get status based on boolean
+          const status = getStatusDisplay(food.isAvailable);
           
           return (
             <TouchableOpacity
@@ -158,17 +174,16 @@ function FeedHome({ navigation }: any) {
               activeOpacity={0.8}
             >
               <View style={styles.imageContainer}>
-                <Image source={food.image} style={styles.image} />
+                <Image source={food.image} style={styles.image} resizeMode="cover" />
                 {isFavorite(food.id) && (
                   <View style={styles.favoritebadge}>
                     <Ionicons name="heart" size={16} color="#FFFFFF" />
                   </View>
                 )}
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryText}>{food.category}</Text>
-                </View>
-                <View style={[styles.stockBadge, { backgroundColor: stockStatus.color }]}>
-                  <Text style={styles.stockText}>{stockStatus.text}</Text>
+                
+                {/* ✅ CHANGED: Display Status Badge */}
+                <View style={[styles.stockBadge, { backgroundColor: status.color }]}>
+                  <Text style={styles.stockText}>{status.text}</Text>
                 </View>
               </View>
 
@@ -182,15 +197,6 @@ function FeedHome({ navigation }: any) {
                 >
                   {food.name}
                 </Text>
-                {/* <Text
-                  style={[
-                    styles.foodDesc,
-                    { color: isDarkMode ? '#BDBDBD' : '#616161' }
-                  ]}
-                  numberOfLines={2}
-                >
-                  {food.description}
-                </Text> */}
                 
                 <View style={styles.priceStockContainer}>
                   <View style={styles.priceContainer}>
@@ -201,30 +207,9 @@ function FeedHome({ navigation }: any) {
                       ₱{food.price}
                     </Text>
                   </View>
-                  <View style={styles.stockContainer}>
-                    <Text style={[styles.stockLabel, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
-                      Stock:
-                    </Text>
-                    <Text style={[styles.stockValue, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
-                      {food.stock}
-                    </Text>
-                  </View>
+                  
+                  {/* ✅ CHANGED: Removed Stock Quantity number display */}
                 </View>
-
-                {/* <View style={styles.cardFooter}>
-                  {hasReviews ? (
-                    <>
-                      {renderStars(avgRating)}
-                      <Text style={[styles.ratingValue, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
-                        {avgRating.toFixed(1)}
-                      </Text>
-                    </>
-                  ) : (
-                    <Text style={[styles.noRatingText, { color: isDarkMode ? '#757575' : '#9E9E9E' }]}>
-                      No reviews yet
-                    </Text>
-                  )}
-                </View> */}
               </View>
             </TouchableOpacity>
           );
@@ -264,6 +249,7 @@ export default function FeedTab() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: { flex: 1 },
   scrollContent: { padding: 10, paddingBottom: 30 },
   header: { alignItems: 'center', marginVertical: 5 },
@@ -318,7 +304,6 @@ const styles = StyleSheet.create({
   stockText: { fontSize: 10, fontWeight: 'bold', color: '#FFFFFF' },
   cardContent: { padding: 12 },
   foodName: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  foodDesc: { fontSize: 12, marginBottom: 8, lineHeight: 16 },
   
   priceStockContainer: {
     flexDirection: 'row',
@@ -337,23 +322,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  stockContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  stockLabel: {
-    fontSize: 10,
-    marginRight: 4,
-  },
-  stockValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  starsContainer: { flexDirection: 'row', gap: 2 },
-  ratingValue: { fontSize: 12, fontWeight: '600' },
-  noRatingText: { fontSize: 12, fontStyle: 'italic' },
+  // Removed stockContainer styles as they are no longer used in the layout
   
   searchContainer: {
     flexDirection: 'row',
@@ -390,7 +359,10 @@ const styles = StyleSheet.create({
   filterOption: {
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 10
+    borderRadius: 10,
+    marginBottom: 5,
+    marginRight: 5,
+    backgroundColor: 'rgba(0,0,0,0.05)'
   },
   filterOptionActive: {
     backgroundColor: '#B71C1C'
