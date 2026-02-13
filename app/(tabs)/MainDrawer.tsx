@@ -168,6 +168,13 @@ export default function MainDrawer() {
     checkAuthStatus();
   }, []);
 
+  // Helper to format date
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return '';
+    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
   const fetchMyCoupons = async () => {
     try {
         const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
@@ -178,9 +185,11 @@ export default function MainDrawer() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        // ✅ Map expiration from criteria_details
         const coupons = response.data.map((item: any) => ({
             ...item,
-            status: item.status || 'Active' 
+            status: item.status || 'Active',
+            expiration: item.criteria_details?.valid_to || item.valid_to
         }));
         
         setClaimedCoupons(coupons);
@@ -308,6 +317,13 @@ export default function MainDrawer() {
           <Text style={[styles.couponName, { color: isDarkMode ? '#BBB' : '#555' }]}>{item.name}</Text>
           <Text style={styles.couponCode}>Rate: <Text style={{fontWeight:'bold'}}>{item.rate}</Text></Text>
           
+          {/* ✅ DISPLAY EXPIRY DATE */}
+          {item.expiration && (
+             <Text style={{fontSize: 11, color: isDarkMode ? '#888' : '#757575', marginTop: 4}}>
+                Expires: {formatDate(item.expiration)}
+             </Text>
+          )}
+
           {isRedeemed && <Text style={{fontSize: 10, color: '#757575', marginTop: 4, fontWeight:'bold'}}>STATUS: REDEEMED</Text>}
         </View>
         <View style={styles.couponRight}>
@@ -434,19 +450,14 @@ export default function MainDrawer() {
                     <Text style={styles.posCodeText}>{selectedPosCoupon?.code}</Text>
                 </View>
 
-                <TouchableOpacity 
-                    style={styles.posDoneButton}
-                    onPress={handlePosDone}
-                >
-                    <Ionicons name="checkmark-circle-outline" size={24} color="#FFF" />
-                    <Text style={styles.posDoneText}>Done / Mark as Used</Text>
-                </TouchableOpacity>
+                {/* ✅ REMOVED 'MARK AS USED' BUTTON HERE */}
+                {/* Only Show Close/Cancel now */}
 
                 <TouchableOpacity 
-                    style={{marginTop: 15}}
+                    style={{marginTop: 15, padding: 15}}
                     onPress={() => setPosModalVisible(false)}
                 >
-                    <Text style={{color: '#888'}}>Cancel</Text>
+                    <Text style={{color: isDarkMode ? '#CCC' : '#555', fontSize: 16, fontWeight: 'bold'}}>Close</Text>
                 </TouchableOpacity>
             </View>
         </View>

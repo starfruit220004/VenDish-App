@@ -84,8 +84,21 @@ export default function WriteReview({ route, navigation }: Props) {
         setMedia(null);
         navigation.goBack();
       }, 2000);
-    } catch (error) {
-      setErrorMessage('Failed to submit review. Please try again.');
+    } catch (error: any) {
+      console.error("Review Error:", error);
+      
+      // ✅ FIX: Extract the specific error message from the backend response
+      let msg = 'Failed to submit review. Please try again.';
+      if (error.response?.data) {
+          // If it's an object (like {"product": ["Invalid pk"]}), stringify it
+          if (typeof error.response.data === 'object') {
+             msg = JSON.stringify(error.response.data); 
+          } else {
+             msg = error.response.data;
+          }
+      }
+      
+      setErrorMessage(msg);
       setErrorModalVisible(true);
     } finally {
       setIsSubmitting(false);

@@ -29,7 +29,7 @@ export type Food = {
   image: any;
   category: string;
   price: number;
-  stock: number;
+  isAvailable: boolean;
 };
 
 export type FoodItem = Food;

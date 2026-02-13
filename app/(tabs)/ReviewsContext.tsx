@@ -1,8 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const FOOD_REVIEWS_KEY = '@food_reviews';
-const SHOP_REVIEWS_KEY = '@shop_reviews';
+import { useFocusEffect } from '@react-navigation/native';
+import api from '../../api/api';
 
 export interface FoodReview {
   id: string;
@@ -26,8 +24,8 @@ export interface ShopReview {
 interface ReviewsContextType {
   foodReviews: FoodReview[];
   shopReviews: ShopReview[];
-  addFoodReview: (review: Omit<FoodReview, 'id' | 'timestamp'>) => Promise<void>;
-  addShopReview: (review: Omit<ShopReview, 'id' | 'timestamp'>) => Promise<void>;
+  addFoodReview: (review: { foodId: number; username: string; rating: number; review: string; media?: string }) => Promise<void>;
+  addShopReview: (review: { username: string; rating: number; review: string; media?: string }) => Promise<void>;
   getFoodReviews: (foodId: number) => FoodReview[];
   getAverageFoodRating: (foodId: number) => number;
   getAverageShopRating: () => number;
@@ -59,24 +57,40 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
 
   const loadReviews = useCallback(async () => {
     try {
-      console.log('Loading reviews from AsyncStorage...');
-      const [foodData, shopData] = await Promise.all([
-        AsyncStorage.getItem(FOOD_REVIEWS_KEY),
-        AsyncStorage.getItem(SHOP_REVIEWS_KEY),
-      ]);
+      console.log('Fetching reviews from API...');
+      const response = await api.get('/firstapp/reviews/');
+      const allReviews = response.data;
 
-      if (foodData) {
-        const parsedFoodReviews = JSON.parse(foodData);
-        console.log('Loaded food reviews:', parsedFoodReviews.length);
-        setFoodReviews(parsedFoodReviews);
-      }
-      if (shopData) {
-        const parsedShopReviews = JSON.parse(shopData);
-        console.log('Loaded shop reviews:', parsedShopReviews.length);
-        setShopReviews(parsedShopReviews);
-      }
+      // 1. Process Shop Reviews
+      const fetchedShopReviews = allReviews
+        .filter((r: any) => r.review_type === 'shop')
+        .map((r: any) => ({
+          id: r.id.toString(),
+          username: r.username || 'Anonymous',
+          rating: r.rating,
+          review: r.comment, // Map 'comment' to 'review'
+          media: r.image,    // Map 'image' to 'media'
+          timestamp: new Date(r.created_at).getTime(),
+        }));
+
+      // 2. Process Food Reviews
+      const fetchedFoodReviews = allReviews
+        .filter((r: any) => r.review_type === 'food')
+        .map((r: any) => ({
+          id: r.id.toString(),
+          foodId: r.product, // The product ID
+          username: r.username || 'Anonymous',
+          rating: r.rating,
+          review: r.comment,
+          media: r.image,
+          timestamp: new Date(r.created_at).getTime(),
+        }));
+
+      setShopReviews(fetchedShopReviews);
+      setFoodReviews(fetchedFoodReviews);
+      
     } catch (error) {
-      console.error('Error loading reviews:', error);
+      console.error('Error loading reviews from API:', error);
     } finally {
       setIsLoading(false);
     }
@@ -86,62 +100,69 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
     await loadReviews();
   }, [loadReviews]);
 
-  const addFoodReview = useCallback(async (review: Omit<FoodReview, 'id' | 'timestamp'>) => {
+  // ✅ UPDATED: Send Food Review to API
+  const addFoodReview = useCallback(async (reviewData: { foodId: number; username: string; rating: number; review: string; media?: string }) => {
     try {
-      const newReview: FoodReview = {
-        ...review,
-        id: Date.now().toString() + Math.random().toString(36),
-        timestamp: Date.now(),
-      };
+      const formData = new FormData();
+      formData.append('review_type', 'food');
+      formData.append('product', reviewData.foodId.toString()); // Send product ID
+      formData.append('rating', reviewData.rating.toString());
+      formData.append('comment', reviewData.review);
 
-      console.log('Adding new food review:', newReview);
+      if (reviewData.media) {
+        // @ts-ignore
+        formData.append('image', {
+          uri: reviewData.media,
+          name: 'food_review.jpg',
+          type: 'image/jpeg',
+        });
+      }
 
-      const updatedReviews = [...foodReviews, newReview];
-      
-      // Update state first
-      setFoodReviews(updatedReviews);
-      
-      // Then save to AsyncStorage
-      await AsyncStorage.setItem(FOOD_REVIEWS_KEY, JSON.stringify(updatedReviews));
-      
-      console.log('Food review saved successfully. Total reviews:', updatedReviews.length);
+      await api.post('/firstapp/reviews/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      // Refresh list after posting
+      await loadReviews();
+
     } catch (error) {
-      console.error('Error adding food review:', error);
+      console.error('Error posting food review:', error);
       throw error;
     }
-  }, [foodReviews]);
+  }, [loadReviews]);
 
-  const addShopReview = useCallback(async (review: Omit<ShopReview, 'id' | 'timestamp'>) => {
+  // ✅ UPDATED: Send Shop Review to API (If used by other components)
+  const addShopReview = useCallback(async (reviewData: { username: string; rating: number; review: string; media?: string }) => {
     try {
-      const newReview: ShopReview = {
-        ...review,
-        id: Date.now().toString() + Math.random().toString(36),
-        timestamp: Date.now(),
-      };
+      const formData = new FormData();
+      formData.append('review_type', 'shop');
+      formData.append('rating', reviewData.rating.toString());
+      formData.append('comment', reviewData.review);
 
-      console.log('Adding new shop review:', newReview);
+      if (reviewData.media) {
+        // @ts-ignore
+        formData.append('image', {
+          uri: reviewData.media,
+          name: 'shop_review.jpg',
+          type: 'image/jpeg',
+        });
+      }
 
-      const updatedReviews = [...shopReviews, newReview];
-      
-      // Update state first
-      setShopReviews(updatedReviews);
-      
-      // Then save to AsyncStorage
-      await AsyncStorage.setItem(SHOP_REVIEWS_KEY, JSON.stringify(updatedReviews));
-      
-      console.log('Shop review saved successfully. Total reviews:', updatedReviews.length);
+      await api.post('/firstapp/reviews/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      await loadReviews();
     } catch (error) {
-      console.error('Error adding shop review:', error);
+      console.error('Error posting shop review:', error);
       throw error;
     }
-  }, [shopReviews]);
+  }, [loadReviews]);
 
   const getFoodReviews = useCallback((foodId: number): FoodReview[] => {
-    const filtered = foodReviews
+    return foodReviews
       .filter(review => review.foodId === foodId)
       .sort((a, b) => b.timestamp - a.timestamp);
-    console.log(`Getting reviews for food ${foodId}:`, filtered.length);
-    return filtered;
   }, [foodReviews]);
 
   const getAverageFoodRating = useCallback((foodId: number): number => {
@@ -154,14 +175,8 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
   const getAverageShopRating = useCallback((): number => {
     if (shopReviews.length === 0) return 0;
     const sum = shopReviews.reduce((acc, review) => acc + review.rating, 0);
-    const average = Number((sum / shopReviews.length).toFixed(1));
-    console.log('Shop average rating:', average, 'from', shopReviews.length, 'reviews');
-    return average;
+    return Number((sum / shopReviews.length).toFixed(1));
   }, [shopReviews]);
-
-  if (isLoading) {
-    return null; 
-  }
 
   return (
     <ReviewsContext.Provider

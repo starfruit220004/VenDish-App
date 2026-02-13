@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView,
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useReviews } from './ReviewsContext';
+import api from "../../api/api";
 import { AuthContext } from '../context/AuthContext';
 
 type WriteShopReviewProps = {
@@ -56,11 +57,27 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
 
     setIsSubmitting(true);
     try {
-      await addShopReview({
-        username: userData.username,
-        rating,
-        review: review.trim(),
-        media: media || undefined,
+      // Create FormData to handle image upload
+      const formData = new FormData();
+      formData.append('review_type', 'shop');
+      formData.append('rating', rating.toString());
+      formData.append('comment', review.trim());
+      
+      if (media) {
+        // @ts-ignore
+        formData.append('image', {
+          uri: media,
+          name: 'review_image.jpg',
+          type: 'image/jpeg',
+        });
+      }
+
+      // POST to the new backend endpoint
+      // Note: We use 'Content-Type': 'multipart/form-data' which axios handles automatically with FormData
+      await api.post('/firstapp/reviews/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       setShowSuccessModal(true);
@@ -72,8 +89,11 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
         setMedia(null);
         navigation.goBack();
       }, 2000);
-    } catch (error) {
-      setErrorMessage('Failed to submit review. Please try again.');
+
+    } catch (error: any) {
+      console.error("Review Error:", error);
+      const msg = error.response?.data ? JSON.stringify(error.response.data) : 'Failed to submit review.';
+      setErrorMessage(msg);
       setErrorModalVisible(true);
     } finally {
       setIsSubmitting(false);
