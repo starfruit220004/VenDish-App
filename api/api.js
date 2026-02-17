@@ -9,7 +9,7 @@ const api = axios.create({
   // NOTE: 'http://127.0.0.1:8000/' works on Web/iOS Simulator but NOT Android Emulator.
   // Use 'http://10.0.2.2:8000/' for Android Emulator to reach localhost.
   // Use your LAN IP (e.g., 192.168.x.x) for physical devices.
-  baseURL: 'https://plagihedral-asuncion-tumidly.ngrok-free.dev', 
+  baseURL: 'https://unfluvial-epicontinental-jeffery.ngrok-free.dev', 
   headers: {
     "Content-Type": "application/json",
   },

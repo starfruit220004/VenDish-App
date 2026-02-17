@@ -1,10 +1,36 @@
-import React from 'react';
-import { View, Text, StyleSheet, useColorScheme, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, useColorScheme, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import api from '../../api/api';
 
 export default function LocationTab() {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
+
+  const [address, setAddress] = useState('Loading address...');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLocation = async () => {
+      try {
+        // The backend viewset returns the latest contact object
+        const response = await api.get(`/firstapp/contact-page/`);
+        
+        if (response.data && response.data.address) {
+          setAddress(response.data.address);
+        } else {
+          setAddress('Baliwasan, Philippines'); // Fallback
+        }
+      } catch (error) {
+        console.error("Failed to fetch location", error);
+        setAddress('Baliwasan, Philippines'); // Fallback on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLocation();
+  }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? "#000" : "#FFEBEE" }]}>
@@ -27,14 +53,18 @@ export default function LocationTab() {
       <View style={[styles.card, { backgroundColor: isDark ? "#1E1E1E" : "#FFFFFF" }]}>
         <Ionicons name="location" size={28} color={isDark ? "#FF5252" : "#B71C1C"} />
 
-        <View style={{ marginLeft: 10 }}>
+        <View style={{ marginLeft: 10, flex: 1 }}>
           <Text style={[styles.cardTitle, { color: isDark ? "#FFFFFF" : "#212121" }]}>
-            Kuya Vince Carenderia
+            Kuya Vince Karinderya
           </Text>
 
-          <Text style={[styles.cardSubtitle, { color: isDark ? "#BDBDBD" : "#616161" }]}>
-            Baliwasan, Philippines
-          </Text>
+          {loading ? (
+             <ActivityIndicator size="small" color={isDark ? "#FFF" : "#B71C1C"} style={{alignSelf: 'flex-start', marginTop: 5}}/>
+          ) : (
+             <Text style={[styles.cardSubtitle, { color: isDark ? "#BDBDBD" : "#616161" }]}>
+               {address}
+             </Text>
+          )}
         </View>
       </View>
 
@@ -88,12 +118,6 @@ const styles = StyleSheet.create({
   mapImage: {
     width: "100%",
     height: "100%",
-  },
-
-  mapText: {
-    marginTop: 10,
-    fontSize: 14,
-    fontWeight: "500"
   },
 
   card: {

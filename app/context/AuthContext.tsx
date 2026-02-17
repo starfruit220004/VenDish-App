@@ -9,8 +9,9 @@ export interface Coupon {
   terms: string;
   expiration: string;
   code: string;
-  rate: string; // or number, depending on your API
-  status: 'Active' | 'Claimed' | 'Redeemed';
+  rate: string; 
+  // [UPDATED] Added 'Expired' to status
+  status: 'Active' | 'Claimed' | 'Redeemed' | 'Expired';
   image?: any;
 }
 
@@ -22,7 +23,6 @@ export interface UserData {
   firstname?: string;
   lastname?: string;
   profilePic?: string;
-  // ✅ ADD THESE TWO FIELDS
   phone?: string;
   address?: string;
 }

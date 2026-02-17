@@ -56,8 +56,8 @@ export default function Promos() {
         status: item.status || 'Active', 
         description: item.description || `Enjoy this exclusive ${item.name} deal!`,
         terms: item.terms || 'Valid for dine-in only. One use per customer.',
-        // ✅ ADDED: Explicitly map expiration from backend structure
-        expiration: item.criteria_details?.valid_to || item.valid_to
+        // ✅ FETCHING EXPIRATION: Map valid_to from criteria_details
+        expiration: item.criteria_details?.valid_to || null 
       }));
 
       setPromos(formattedData);
@@ -81,7 +81,6 @@ export default function Promos() {
   const handleClaimPromo = async (promo: Coupon) => {
     if (isLoggedIn) {
       try {
-        // ✅ 1. Get Token
         const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
 
         if (!token) {
@@ -90,7 +89,6 @@ export default function Promos() {
             return;
         }
 
-        // ✅ 2. Send with Headers
         await api.post(
             `firstapp/coupons/${promo.id}/claim/`, 
             {}, 
@@ -101,14 +99,14 @@ export default function Promos() {
             }
         );
 
-        // 3. Update the local state
+        // Update local state
         setPromos(prevPromos => 
           prevPromos.map(p => 
             p.id === promo.id ? { ...p, status: 'Claimed' as const } : p
           )
         );
 
-        // 4. Update Context/Wallet
+        // Update Context
         const updatedPromo: Coupon = { ...promo, status: 'Claimed' };
         
         setSelectedPromo(updatedPromo);
@@ -119,7 +117,6 @@ export default function Promos() {
       } catch (error: any) {
         console.error("Claim error:", error);
         
-        // ✅ 3. Handle 401
         if (error.response && error.response.status === 401) {
             Alert.alert("Session Expired", "Please login again to claim this reward.");
             logout(); 
@@ -157,10 +154,15 @@ export default function Promos() {
     }
   };
 
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return 'No Expiry';
+  // ✅ HELPER: Format Date
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return 'No Expiration';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'No Expiration';
+    
+    // Format: "Oct 25, 2024"
     const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    return date.toLocaleDateString('en-US', options);
   };
 
   const formatCurrency = (amount: string) => {
@@ -204,14 +206,19 @@ export default function Promos() {
           const status = promo.status ? promo.status.toLowerCase() : 'active';
           
           const isRedeemed = status === 'redeemed';
+          const isExpired = status === 'expired'; // [UPDATED] Check for expired
           const isClaimed = status === 'claimed' || isLocallyClaimed;
           
-          const isUnavailable = isRedeemed || isClaimed;
+          // [UPDATED] Unavailable if redeemed, claimed, or expired
+          const isUnavailable = isRedeemed || isClaimed || isExpired;
 
           let buttonText = 'Claim Now';
           let iconName: keyof typeof Ionicons.glyphMap = 'checkmark-circle-outline';
 
-          if (isRedeemed) {
+          if (isExpired) {
+            buttonText = 'Expired'; // [UPDATED] Label
+            iconName = 'time-sharp';
+          } else if (isRedeemed) {
             buttonText = 'Redeemed';
             iconName = 'checkmark-circle-sharp';
           } else if (isClaimed) {
@@ -225,10 +232,19 @@ export default function Promos() {
           return (
             <View 
               key={promo.id} 
-              style={[styles.promoCard, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }]}
+              style={[
+                styles.promoCard, 
+                { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' },
+                isExpired && { opacity: 0.7 } // [UPDATED] Fade out expired cards
+              ]}
             >
-              <View style={styles.discountBadge}>
-                <Text style={styles.discountText}>{formatCurrency(promo.rate)} OFF</Text>
+              <View style={[
+                  styles.discountBadge,
+                  isExpired && { backgroundColor: '#757575' } // [UPDATED] Grey badge if expired
+                ]}>
+                <Text style={styles.discountText}>
+                    {isExpired ? 'EXPIRED' : `${formatCurrency(promo.rate)} OFF`}
+                </Text>
               </View>
               
               <View style={styles.promoInfo}>
@@ -251,10 +267,13 @@ export default function Promos() {
                       {promo.terms}
                     </Text>
                   </View>
+                  
+                  {/* ✅ DISPLAY EXPIRATION DATE */}
                   <View style={styles.detailRow}>
                     <Ionicons name="time-outline" size={16} color={isDarkMode ? '#9E9E9E' : '#757575'} />
                     <Text style={[styles.expiryText, { color: isDarkMode ? '#9E9E9E' : '#757575' }]}>
-                      Expires: {formatDate(promo.expiration)}
+                      {isExpired ? 'Expired on: ' : 'Expires: '} 
+                      {formatDate(promo.expiration)}
                     </Text>
                   </View>
                 </View>
@@ -311,7 +330,8 @@ export default function Promos() {
           </View>
         </View>
       )}
-
+      
+      {/* ... Modals (keep existing modals) ... */}
       <Modal visible={authModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalBox, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
