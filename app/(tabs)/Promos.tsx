@@ -58,7 +58,8 @@ export default function Promos() {
         terms: item.terms || 'Valid for dine-in only. One use per customer.',
         // ✅ FETCHING EXPIRATION: Map valid_to from criteria_details
         expiration: item.criteria_details?.valid_to || null 
-      }));
+      }))
+      // .filter((item: any) => item.status !== 'Expired');
 
       setPromos(formattedData);
     } catch (error) {
