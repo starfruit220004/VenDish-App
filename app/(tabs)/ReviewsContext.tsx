@@ -30,6 +30,8 @@ interface ReviewsContextType {
   getAverageFoodRating: (foodId: number) => number;
   getAverageShopRating: () => number;
   refreshReviews: () => Promise<void>;
+  hasReviewedFood: (foodId: number, username: string) => boolean;
+  hasReviewedShopToday: (username: string) => boolean;
 }
 
 const ReviewsContext = createContext<ReviewsContextType>({
@@ -41,6 +43,8 @@ const ReviewsContext = createContext<ReviewsContextType>({
   getAverageFoodRating: () => 0,
   getAverageShopRating: () => 0,
   refreshReviews: async () => {},
+  hasReviewedFood: () => false,
+  hasReviewedShopToday: () => false,
 });
 
 export const useReviews = () => useContext(ReviewsContext);
@@ -178,6 +182,18 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
     return Number((sum / shopReviews.length).toFixed(1));
   }, [shopReviews]);
 
+  const hasReviewedFood = useCallback((foodId: number, username: string): boolean => {
+    return foodReviews.some(r => r.foodId === foodId && r.username === username);
+  }, [foodReviews]);
+
+  const hasReviewedShopToday = useCallback((username: string): boolean => {
+    const today = new Date().setHours(0, 0, 0, 0);
+    return shopReviews.some(r => {
+      const reviewDate = new Date(r.timestamp).setHours(0, 0, 0, 0);
+      return r.username === username && reviewDate === today;
+    });
+  }, [shopReviews]);
+
   return (
     <ReviewsContext.Provider
       value={{
@@ -189,6 +205,8 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
         getAverageFoodRating,
         getAverageShopRating,
         refreshReviews,
+        hasReviewedFood,
+        hasReviewedShopToday,
       }}
     >
       {children}

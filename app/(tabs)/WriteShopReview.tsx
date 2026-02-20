@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, useColorScheme, Modal, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,7 +14,7 @@ type WriteShopReviewProps = {
 export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
-  const { addShopReview } = useReviews();
+  const { addShopReview, hasReviewedShopToday } = useReviews();
   const { isLoggedIn, userData } = useContext(AuthContext);
 
   const [review, setReview] = useState("");
@@ -24,6 +24,20 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (isSubmitting || showSuccessModal) return;
+
+    if (isLoggedIn && userData) {
+      if (hasReviewedShopToday(userData.username)) {
+        Alert.alert(
+          "Daily Limit Reached", 
+          "You can only submit one shop review per day. Please come back tomorrow!", 
+          [{ text: "OK", onPress: () => navigation.goBack() }]
+        );
+      }
+    }
+  }, [isLoggedIn, userData, hasReviewedShopToday, isSubmitting, showSuccessModal]);
 
   const pickMedia = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -43,7 +57,6 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
       setErrorModalVisible(true);
       return;
     }
-
     if (rating === 0) {
       setErrorMessage('Please select a rating!');
       setErrorModalVisible(true);
@@ -51,6 +64,11 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
     }
     if (review.trim() === "") {
       setErrorMessage('Please write a review!');
+      setErrorModalVisible(true);
+      return;
+    }
+    if (hasReviewedShopToday(userData.username)) {
+      setErrorMessage('You can only submit one shop review per day.');
       setErrorModalVisible(true);
       return;
     }

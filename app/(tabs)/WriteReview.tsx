@@ -1,5 +1,5 @@
-import React, { useState, useContext } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, useColorScheme, Modal } from "react-native";
+import React, { useState, useContext, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, useColorScheme, Modal, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -24,7 +24,7 @@ export default function WriteReview({ route, navigation }: Props) {
   const { food } = route.params;
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
-  const { addFoodReview } = useReviews();
+  const { addFoodReview, hasReviewedFood } = useReviews();
   const { isLoggedIn, userData } = useContext(AuthContext);
 
   const [review, setReview] = useState("");
@@ -34,6 +34,21 @@ export default function WriteReview({ route, navigation }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+
+    if (isSubmitting || showSuccessModal) return;
+
+    if (isLoggedIn && userData) {
+      if (hasReviewedFood(food.id, userData.username)) {
+        Alert.alert(
+          "Already Reviewed", 
+          "You have already shared your thoughts on this dish. Thank you!", 
+          [{ text: "OK", onPress: () => navigation.goBack() }]
+        );
+      }
+    }
+  }, [isLoggedIn, userData, food.id, hasReviewedFood, isSubmitting, showSuccessModal]);
 
   const pickMedia = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -59,8 +74,15 @@ export default function WriteReview({ route, navigation }: Props) {
       setErrorModalVisible(true);
       return;
     }
+    
     if (review.trim() === "") {
       setErrorMessage('Please write a review!');
+      setErrorModalVisible(true);
+      return;
+    }
+
+    if (hasReviewedFood(food.id, userData.username)) {
+      setErrorMessage('You have already reviewed this food item.');
       setErrorModalVisible(true);
       return;
     }
