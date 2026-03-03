@@ -29,31 +29,31 @@ export interface UserData {
 export interface AuthContextType {
   isLoggedIn: boolean;
   userData: UserData | null;
+  userToken: string | null;
   claimedCoupons: Coupon[];
   login: (user: UserData, access: string, refresh: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUserData: (user: UserData) => Promise<void>;
   addToWallet: (coupon: Coupon) => Promise<boolean>;
   removeFromWallet: (id: number) => Promise<void>;
-  // [NEW] Add deactivate function type
-  deactivateAccount: (password: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
   userData: null,
+  userToken: null,
   claimedCoupons: [],
   login: async () => {},
   logout: async () => {},
   updateUserData: async () => {},
   addToWallet: async () => false,
   removeFromWallet: async () => {},
-  deactivateAccount: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [userToken, setUserToken] = useState<string | null>(null);
   const [claimedCoupons, setClaimedCoupons] = useState<Coupon[]>([]);
 
   // Load data on startup
@@ -67,6 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (token && user) {
           setIsLoggedIn(true);
           setUserData(JSON.parse(user));
+          setUserToken(token);
         }
         if (coupons) {
           setClaimedCoupons(JSON.parse(coupons));
@@ -85,6 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await AsyncStorage.setItem('user_data', JSON.stringify(user));
       
       setUserData(user);
+      setUserToken(access);
       setIsLoggedIn(true);
     } catch (error) {
       console.error('Login failed', error);
@@ -101,6 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setIsLoggedIn(false);
       setUserData(null);
+      setUserToken(null);
     } catch (error) {
       console.error('Logout failed', error);
     }
@@ -127,38 +130,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await AsyncStorage.setItem('claimed_coupons', JSON.stringify(newCoupons));
   };
 
-  // [NEW] Deactivate Account Function
-  const deactivateAccount = async (password: string) => {
-    try {
-      const token = await AsyncStorage.getItem('access_token');
-      if (!token) throw new Error("No token found");
-
-      // Call Backend
-      await api.post('/firstapp/users/deactivate/', 
-        { password },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // Log out locally on success
-      await logout();
-      
-    } catch (error: any) {
-      console.error("Deactivation error:", error);
-      throw error; // Re-throw to handle in UI
-    }
-  };
-
   return (
     <AuthContext.Provider value={{
       isLoggedIn,
       userData,
+      userToken,
       claimedCoupons,
       login,
       logout,
       updateUserData,
       addToWallet,
       removeFromWallet,
-      deactivateAccount
     }}>
       {children}
     </AuthContext.Provider>

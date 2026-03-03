@@ -16,11 +16,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../../api/api';
 //
-import { AuthContext } from '../context/AuthContext'; 
+import { AuthContext } from '../context/AuthContext';
+import { deactivateAccount } from '../services/authServices';
 
 export default function Profile() {
-  const { userData, logout, deactivateAccount } = useContext(AuthContext); 
+  const { userData, userToken, logout } = useContext(AuthContext);
   const navigation = useNavigation();
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
@@ -30,19 +33,23 @@ export default function Profile() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert(
       "Logout",
       "Are you sure you want to log out?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Logout", onPress: logout, style: "destructive" }
+        { text: "Logout", onPress: async () => {
+            await logout();
+        }, style: "destructive" }
       ]
     );
   };
 
-  const handleDeactivatePress = () => {
+  const handleDeactivate = () => {
+    // Open the deactivation confirmation modal
     setDeactivateModalVisible(true);
+    setPassword('');
   };
 
   const confirmDeactivation = async () => {
@@ -53,16 +60,29 @@ export default function Profile() {
 
     setIsLoading(true);
     try {
-      await deactivateAccount(password);
-      // Success is handled by logout() inside context, but we can close modal
+      // Call the deactivation service with the userToken
+      await deactivateAccount(password, userToken);
+      
+      Alert.alert("Success", "Your account has been deactivated.");
+      
+      // Close modal
       setDeactivateModalVisible(false);
-      Alert.alert("Account Deactivated", "Your account has been successfully deactivated.");
+      setPassword('');
+      
+      // Logout after successful deactivation
+      setTimeout(async () => {
+        await logout();
+        // Navigate to home/Tabs after logout
+        (navigation as any).reset({
+          index: 0,
+          routes: [{ name: 'Tabs' }],
+        });
+      }, 500);
     } catch (error: any) {
-      const msg = error.response?.data?.error || "Failed to deactivate account. Please check your password.";
-      Alert.alert("Error", msg);
+      console.error("Deactivation Error:", error.response?.data || error.message);
+      Alert.alert("Error", error.response?.data?.error || "Failed to deactivate account");
     } finally {
       setIsLoading(false);
-      setPassword(''); // Clear password
     }
   };
 
@@ -139,7 +159,7 @@ export default function Profile() {
         <View style={[styles.infoCard, { backgroundColor: cardColor }]}>
             
             {/* [REPLACED] Settings -> Deactivate Account */}
-            <TouchableOpacity style={styles.menuItem} onPress={handleDeactivatePress}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleDeactivate}>
                 <View style={styles.menuItemLeft}>
                     <Ionicons name="trash-outline" size={22} color={textColor} />
                     <Text style={[styles.menuItemText, { color: textColor }]}>Deactivate Account</Text>

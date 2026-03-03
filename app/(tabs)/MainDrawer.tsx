@@ -157,6 +157,7 @@ export default function MainDrawer() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [userToken, setUserToken] = useState<string | null>(null);
   const [claimedCoupons, setClaimedCoupons] = useState<Coupon[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -209,10 +210,12 @@ export default function MainDrawer() {
     try {
       const authStatus = await AsyncStorage.getItem(AUTH_KEY);
       const storedUserData = await AsyncStorage.getItem(USER_DATA_KEY);
+      const storedToken = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
       
-      if (authStatus === 'true' && storedUserData) {
+      if (authStatus === 'true' && storedUserData && storedToken) {
         setIsLoggedIn(true);
         setUserData(JSON.parse(storedUserData));
+        setUserToken(storedToken);
         await fetchMyCoupons();
       } else {
         const storedCoupons = await AsyncStorage.getItem(COUPON_WALLET_KEY); 
@@ -236,6 +239,7 @@ export default function MainDrawer() {
 
       setIsLoggedIn(true);
       setUserData(user);
+      setUserToken(access);
       await fetchMyCoupons();
 
     } catch (error) {
@@ -253,6 +257,7 @@ export default function MainDrawer() {
 
       setIsLoggedIn(false);
       setUserData(null);
+      setUserToken(null);
       setClaimedCoupons([]); 
     } catch (error) {
       console.error('Error removing auth status:', error);
@@ -348,7 +353,7 @@ export default function MainDrawer() {
   }
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, userData, claimedCoupons, login, logout, updateUserData, addToWallet, removeFromWallet }}>
+    <AuthContext.Provider value={{ isLoggedIn, userData, userToken, claimedCoupons, login, logout, updateUserData, addToWallet, removeFromWallet }}>
       <StatusBar barStyle="light-content" backgroundColor={isDarkMode ? '#1C1C1E' : '#B71C1C'} translucent={false} />
       
       <Drawer.Navigator
