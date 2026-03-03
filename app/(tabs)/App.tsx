@@ -24,7 +24,8 @@ export default function App() {
         if (path) {
           const route = path.startsWith('/') ? path : `/${path}`;
           if (route === '/feed' || route.startsWith('/feed')) {
-            Linking.openURL(createURL('/feed'));
+            // Open app root to ensure the main UI loads (avoids expo-router unmatched route)
+            Linking.openURL(createURL('/'));
           }
         }
       } catch (e) {
