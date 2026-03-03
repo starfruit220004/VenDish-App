@@ -25,7 +25,7 @@
         {
           "action": "VIEW",
           "data": [
-            { "scheme": "food" }
+            { "scheme": "feed" }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
         },
