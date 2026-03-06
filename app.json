@@ -25,16 +25,14 @@
         {
           "action": "VIEW",
           "data": [
-            { "scheme": "food" }
+            {
+              "scheme": "food"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
-        },
-        {
-          "action": "VIEW",
-          "data": [
-            { "scheme": "food" }
-          ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -66,6 +64,12 @@
       "eas": {
         "projectId": "531beae2-5e19-471b-8598-ec0e32ea490c"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/531beae2-5e19-471b-8598-ec0e32ea490c"
     }
   }
 }

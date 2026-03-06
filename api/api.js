@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
-const BASE_URL = 'https://unfluvial-epicontinental-jeffery.ngrok-free.dev';
+const BASE_URL = 'https://vendish-food-business-sales-optimzation.onrender.com';
 
 const api = axios.create({
   baseURL: BASE_URL, 
