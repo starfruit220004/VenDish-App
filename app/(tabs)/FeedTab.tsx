@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Dimensions, TextInput, useColorScheme, ActivityIndicator } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -36,7 +36,6 @@ function FeedHome({ navigation }: any) {
         image: item.image ? { uri: item.image } : require('../../assets/images/Logo2.jpg'),
         category: item.category,
         price: Number(item.price),
-        // ✅ CHANGED: Map 'is_available' from backend to 'isAvailable'
         isAvailable: item.is_available 
       }));
 
@@ -55,7 +54,12 @@ function FeedHome({ navigation }: any) {
     }, [refreshReviews])
   );
 
-  const categories = ['All', 'Beef', 'Chicken', 'Fish', 'Vegetables', 'Combo Meal', 'Value Meal', 'Add-on', 'Others'];
+  // ✅ CHANGED: Dynamically generate categories from the fetched data
+  const dynamicCategories = useMemo(() => {
+    // Map over foods to get categories, filter out falsy values, and use Set for uniqueness
+    const uniqueCategories = Array.from(new Set(foods.map(food => food.category).filter(Boolean)));
+    return ['All', ...uniqueCategories];
+  }, [foods]);
 
   const filteredFoods = foods.filter(food => {
     const matchesSearch = food.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -63,7 +67,6 @@ function FeedHome({ navigation }: any) {
     return matchesSearch && matchesCategory;
   });
 
-  // ✅ CHANGED: Logic to determine status text and color
   const getStatusDisplay = (isAvailable: boolean) => {
     if (isAvailable) {
       return { text: 'Available', color: '#4CAF50' }; // Green
@@ -130,7 +133,8 @@ function FeedHome({ navigation }: any) {
           { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }
         ]}>
           <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 5}}>
-          {categories.map(cat => (
+          {/* ✅ CHANGED: Map over the dynamically generated categories */}
+          {dynamicCategories.map(cat => (
             <TouchableOpacity
               key={cat}
               onPress={() => {
@@ -157,7 +161,6 @@ function FeedHome({ navigation }: any) {
 
       <View style={styles.row}>
         {filteredFoods.map(food => {
-          // ✅ CHANGED: Get status based on boolean
           const status = getStatusDisplay(food.isAvailable);
           
           return (
@@ -181,7 +184,6 @@ function FeedHome({ navigation }: any) {
                   </View>
                 )}
                 
-                {/* ✅ CHANGED: Display Status Badge */}
                 <View style={[styles.stockBadge, { backgroundColor: status.color }]}>
                   <Text style={styles.stockText}>{status.text}</Text>
                 </View>
@@ -207,8 +209,6 @@ function FeedHome({ navigation }: any) {
                       ₱{food.price}
                     </Text>
                   </View>
-                  
-                  {/* ✅ CHANGED: Removed Stock Quantity number display */}
                 </View>
               </View>
             </TouchableOpacity>
@@ -322,7 +322,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  // Removed stockContainer styles as they are no longer used in the layout
   
   searchContainer: {
     flexDirection: 'row',

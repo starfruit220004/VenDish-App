@@ -15,15 +15,24 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { deactivateAccount } from '../services/authServices';
+import api from '../../api/api';
 import FeedbackModal, { FeedbackAction, FeedbackVariant } from './FeedbackModal';
 
 export default function Profile() {
-  const { userData, logout } = useAuth();
+  const { userData, logout, updateUserData } = useAuth();
   const navigation = useNavigation();
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
+
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editPhone, setEditPhone] = useState(userData?.phone || '');
+  const [editAddress, setEditAddress] = useState(userData?.address || '');
+  const [editProfilePic, setEditProfilePic] = useState<string | null>(null); // local URI of newly picked image
+  const [isSaving, setIsSaving] = useState(false);
 
   // Modal State
   const [isDeactivateModalVisible, setDeactivateModalVisible] = useState(false);
@@ -53,6 +62,79 @@ export default function Profile() {
 
   const closeFeedback = () => {
     setFeedbackModal(prev => ({ ...prev, visible: false }));
+  };
+
+  // ── Edit Profile helpers ───────────────────────────────────────────────────
+  const startEditing = () => {
+    setEditPhone(userData?.phone || '');
+    setEditAddress(userData?.address || '');
+    setEditProfilePic(null);
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditProfilePic(null);
+  };
+
+  const pickProfileImage = async () => {
+    const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permResult.granted) {
+      showFeedback('Permission Denied', 'Camera roll access is required to change your profile picture.', 'error');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setEditProfilePic(result.assets[0].uri);
+    }
+  };
+
+  const saveProfile = async () => {
+    setIsSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append('phone', editPhone.trim());
+      formData.append('address', editAddress.trim());
+
+      if (editProfilePic) {
+        // @ts-ignore – React Native FormData accepts this shape
+        formData.append('profile_pic', {
+          uri: editProfilePic,
+          name: 'profile_pic.jpg',
+          type: 'image/jpeg',
+        });
+      }
+
+      const response = await api.patch('/firstapp/users/me/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const backendUser = response.data;
+
+      // Sync context + AsyncStorage with the server response
+      await updateUserData({
+        ...userData!,
+        phone: backendUser.phone || '',
+        address: backendUser.address || '',
+        profilePic: backendUser.profile_pic || '',
+      });
+
+      setIsEditing(false);
+      setEditProfilePic(null);
+      showFeedback('Profile Updated', 'Your profile has been saved successfully.', 'success');
+    } catch (error: any) {
+      console.error('Profile update error:', error.response?.data || error.message);
+      showFeedback('Error', 'Failed to update profile. Please try again.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -156,16 +238,18 @@ export default function Profile() {
       {/* Header Section */}
       <View style={[styles.header, { backgroundColor: cardColor }]}>
         <View style={styles.avatarContainer}>
-            {userData?.profilePic ? (
-                <Image source={{ uri: userData.profilePic }} style={styles.avatar} />
+            {(editProfilePic || userData?.profilePic) ? (
+                <Image source={{ uri: editProfilePic || userData?.profilePic }} style={styles.avatar} />
             ) : (
                 <View style={[styles.avatarPlaceholder, { backgroundColor: '#B71C1C' }]}>
                     <Text style={styles.avatarInitials}>{getInitials()}</Text>
                 </View>
             )}
-            <TouchableOpacity style={styles.editIconBadge}>
-                <Ionicons name="camera" size={14} color="#FFF" />
-            </TouchableOpacity>
+            {isEditing && (
+              <TouchableOpacity style={styles.editIconBadge} onPress={pickProfileImage}>
+                  <Ionicons name="camera" size={14} color="#FFF" />
+              </TouchableOpacity>
+            )}
         </View>
 
         <Text style={[styles.name, { color: textColor }]}>
@@ -178,7 +262,31 @@ export default function Profile() {
 
       {/* Info Section */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: subTextColor }]}>Personal Information</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <Text style={[styles.sectionTitle, { color: subTextColor, marginBottom: 0 }]}>Personal Information</Text>
+          {!isEditing ? (
+            <TouchableOpacity onPress={startEditing} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="create-outline" size={18} color="#B71C1C" />
+              <Text style={{ color: '#B71C1C', fontWeight: '600', fontSize: 14 }}>Edit</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity onPress={cancelEditing} disabled={isSaving}>
+                <Text style={{ color: subTextColor, fontWeight: '600', fontSize: 14 }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={saveProfile} disabled={isSaving} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#B71C1C" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle-outline" size={18} color="#B71C1C" />
+                    <Text style={{ color: '#B71C1C', fontWeight: '600', fontSize: 14 }}>Save</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
         
         <View style={[styles.infoCard, { backgroundColor: cardColor }]}>
             <View style={styles.infoRow}>
@@ -199,6 +307,54 @@ export default function Profile() {
                 <Text style={[styles.infoValue, { color: textColor }]}>
                     {userData?.firstname} {userData?.middlename ? userData.middlename + '. ' : ''}{userData?.lastname}
                 </Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            {/* Phone */}
+            <View style={styles.infoRow}>
+                <View style={styles.infoLabelContainer}>
+                    <Ionicons name="call-outline" size={20} color="#B71C1C" />
+                    <Text style={[styles.infoLabel, { color: subTextColor }]}>Phone</Text>
+                </View>
+                {isEditing ? (
+                  <TextInput
+                    style={[styles.editInput, { color: textColor, borderColor: isDarkMode ? '#555' : '#DDD', backgroundColor: isDarkMode ? '#2C2C2E' : '#FAFAFA' }]}
+                    value={editPhone}
+                    onChangeText={setEditPhone}
+                    placeholder="Enter phone number"
+                    placeholderTextColor="#999"
+                    keyboardType="phone-pad"
+                  />
+                ) : (
+                  <Text style={[styles.infoValue, { color: userData?.phone ? textColor : '#999' }]}>
+                    {userData?.phone || 'Not set'}
+                  </Text>
+                )}
+            </View>
+
+            <View style={styles.divider} />
+
+            {/* Address */}
+            <View style={styles.infoRow}>
+                <View style={styles.infoLabelContainer}>
+                    <Ionicons name="location-outline" size={20} color="#B71C1C" />
+                    <Text style={[styles.infoLabel, { color: subTextColor }]}>Address</Text>
+                </View>
+                {isEditing ? (
+                  <TextInput
+                    style={[styles.editInput, { color: textColor, borderColor: isDarkMode ? '#555' : '#DDD', backgroundColor: isDarkMode ? '#2C2C2E' : '#FAFAFA' }]}
+                    value={editAddress}
+                    onChangeText={setEditAddress}
+                    placeholder="Enter your address"
+                    placeholderTextColor="#999"
+                    multiline
+                  />
+                ) : (
+                  <Text style={[styles.infoValue, { color: userData?.address ? textColor : '#999', flex: 1, textAlign: 'right' }]}>
+                    {userData?.address || 'Not set'}
+                  </Text>
+                )}
             </View>
         </View>
       </View>
@@ -333,6 +489,7 @@ const styles = StyleSheet.create({
   infoLabelContainer: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   infoLabel: { fontSize: 16 },
   infoValue: { fontSize: 16, fontWeight: '500' },
+  editInput: { fontSize: 15, fontWeight: '500', borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minWidth: 140, textAlign: 'right' },
   divider: { height: 1, backgroundColor: 'rgba(150, 150, 150, 0.1)', marginHorizontal: 15 },
   menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 15 },
   menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },

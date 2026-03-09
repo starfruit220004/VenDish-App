@@ -81,7 +81,8 @@ export default function Login() {
         lastname: backendUser.last_name || "",
         fullname: `${backendUser.first_name || ""} ${backendUser.middle_name || ""} ${backendUser.last_name || ""}`.replace(/\s+/g, ' ').trim(),
         address: backendUser.address || '', 
-        phone: backendUser.phone || ''
+        phone: backendUser.phone || '',
+        profilePic: backendUser.profile_pic || '',
       };
 
       await login(userData, access, refresh);

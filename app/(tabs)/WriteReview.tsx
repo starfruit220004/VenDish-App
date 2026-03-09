@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, useColorScheme } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, useColorScheme, Modal } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -32,6 +32,7 @@ export default function WriteReview({ route, navigation }: Props) {
   const [rating, setRating] = useState(0);
   const [media, setMedia] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
   const [feedbackModal, setFeedbackModal] = useState<{
     visible: boolean;
     title: string;
@@ -63,6 +64,18 @@ export default function WriteReview({ route, navigation }: Props) {
     if (isSubmitting || feedbackModal.visible) return;
 
     if (isLoggedIn && userData) {
+      // Check profile completeness — phone, address, and profile picture are all required
+      const missingFields: string[] = [];
+      if (!userData.phone) missingFields.push('Phone Number');
+      if (!userData.address) missingFields.push('Address');
+      if (!userData.profilePic) missingFields.push('Profile Picture');
+
+      if (missingFields.length > 0) {
+        setProfileIncomplete(true);
+        return; // Don't check review history yet — profile gate takes priority
+      }
+      setProfileIncomplete(false);
+
       if (hasReviewedFood(food.id, userData.username)) {
         showFeedback(
           "Already Reviewed",
@@ -292,6 +305,60 @@ export default function WriteReview({ route, navigation }: Props) {
         </TouchableOpacity>
       </ScrollView>
 
+      {/* Profile Incomplete Gate Modal */}
+      <Modal visible={profileIncomplete} transparent animationType="fade">
+        <View style={styles.profileGateOverlay}>
+          <View style={[styles.profileGateBox, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }]}>
+            <View style={[styles.profileGateIconWrap, { backgroundColor: '#FFF3E0' }]}>
+              <Ionicons name="person-circle-outline" size={48} color="#E65100" />
+            </View>
+            <Text style={[styles.profileGateTitle, { color: isDarkMode ? '#FFF' : '#333' }]}>
+              Complete Your Profile
+            </Text>
+            <Text style={[styles.profileGateMessage, { color: isDarkMode ? '#CCC' : '#666' }]}>
+              Please fill up the following fields on your Profile page before writing a review:
+            </Text>
+            <View style={styles.profileGateList}>
+              {!userData?.phone && (
+                <View style={styles.profileGateItem}>
+                  <Ionicons name="call-outline" size={18} color="#B71C1C" />
+                  <Text style={[styles.profileGateItemText, { color: isDarkMode ? '#FFF' : '#333' }]}>Phone Number</Text>
+                </View>
+              )}
+              {!userData?.address && (
+                <View style={styles.profileGateItem}>
+                  <Ionicons name="location-outline" size={18} color="#B71C1C" />
+                  <Text style={[styles.profileGateItemText, { color: isDarkMode ? '#FFF' : '#333' }]}>Address</Text>
+                </View>
+              )}
+              {!userData?.profilePic && (
+                <View style={styles.profileGateItem}>
+                  <Ionicons name="image-outline" size={18} color="#B71C1C" />
+                  <Text style={[styles.profileGateItemText, { color: isDarkMode ? '#FFF' : '#333' }]}>Profile Picture</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.profileGateButtons}>
+              <TouchableOpacity
+                style={[styles.profileGateBtn, { backgroundColor: '#F5F5F5' }]}
+                onPress={() => navigation.goBack()}
+              >
+                <Text style={{ color: '#333', fontWeight: '600', fontSize: 15 }}>Go Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.profileGateBtn, { backgroundColor: '#B71C1C' }]}
+                onPress={() => {
+                  setProfileIncomplete(false);
+                  (navigation as any).navigate('Profile');
+                }}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 15 }}>Go to Profile</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <FeedbackModal
         visible={feedbackModal.visible}
         title={feedbackModal.title}
@@ -458,5 +525,70 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  // Profile gate modal styles
+  profileGateOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  profileGateBox: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    elevation: 8,
+  },
+  profileGateIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  profileGateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  profileGateMessage: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  profileGateList: {
+    alignSelf: 'stretch',
+    marginBottom: 20,
+    gap: 10,
+  },
+  profileGateItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(183, 28, 28, 0.06)',
+  },
+  profileGateItemText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  profileGateButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  profileGateBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
   },
 });

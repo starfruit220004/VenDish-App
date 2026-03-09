@@ -277,7 +277,7 @@ export default function FoodDetail({ route, navigation }: any) {
         </View>
       </ScrollView>
 
-      <View style={styles.buttonContainer}>
+      <View style={[styles.buttonContainer, { backgroundColor: isDarkMode ? '#000' : '#FFEBEE' }]}>
         <TouchableOpacity
           style={styles.writeReviewButton}
           onPress={() => navigation.navigate("WriteReview", { food })}

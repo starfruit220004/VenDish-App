@@ -24,10 +24,22 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
 
   useEffect(() => {
-    // Show the custom modal instead of the native Alert
     if (isLoggedIn && userData) {
+      // Check profile completeness — phone, address, and profile picture are all required
+      const missingFields: string[] = [];
+      if (!userData.phone) missingFields.push('Phone Number');
+      if (!userData.address) missingFields.push('Address');
+      if (!userData.profilePic) missingFields.push('Profile Picture');
+
+      if (missingFields.length > 0) {
+        setProfileIncomplete(true);
+        return; // Don't check daily limit yet — profile gate takes priority
+      }
+      setProfileIncomplete(false);
+
       if (hasReviewedShopToday(userData.username)) {
         setErrorMessage("You can only submit one shop review per day. Please come back tomorrow!");
         setErrorModalVisible(true);
@@ -283,6 +295,60 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
             <Text style={[styles.modalText, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
               Thank you for sharing your experience
             </Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Profile Incomplete Gate Modal */}
+      <Modal visible={profileIncomplete} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
+            <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#FFF3E0', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
+              <Ionicons name="person-circle-outline" size={48} color="#E65100" />
+            </View>
+            <Text style={[styles.modalTitle, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
+              Complete Your Profile
+            </Text>
+            <Text style={[styles.modalText, { color: isDarkMode ? '#BDBDBD' : '#757575', marginBottom: 12 }]}>
+              Please fill up the following fields on your Profile page before writing a review:
+            </Text>
+            <View style={{ alignSelf: 'stretch', marginBottom: 16, gap: 8 }}>
+              {!userData?.phone && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: 'rgba(183, 28, 28, 0.06)' }}>
+                  <Ionicons name="call-outline" size={18} color="#B71C1C" />
+                  <Text style={{ fontSize: 15, fontWeight: '500', color: isDarkMode ? '#FFF' : '#333' }}>Phone Number</Text>
+                </View>
+              )}
+              {!userData?.address && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: 'rgba(183, 28, 28, 0.06)' }}>
+                  <Ionicons name="location-outline" size={18} color="#B71C1C" />
+                  <Text style={{ fontSize: 15, fontWeight: '500', color: isDarkMode ? '#FFF' : '#333' }}>Address</Text>
+                </View>
+              )}
+              {!userData?.profilePic && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: 'rgba(183, 28, 28, 0.06)' }}>
+                  <Ionicons name="image-outline" size={18} color="#B71C1C" />
+                  <Text style={{ fontSize: 15, fontWeight: '500', color: isDarkMode ? '#FFF' : '#333' }}>Profile Picture</Text>
+                </View>
+              )}
+            </View>
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#F5F5F5', flex: 1 }]}
+                onPress={() => navigation.goBack()}
+              >
+                <Text style={[styles.modalButtonText, { color: '#333' }]}>Go Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#B71C1C', flex: 1 }]}
+                onPress={() => {
+                  setProfileIncomplete(false);
+                  navigation.navigate('Profile');
+                }}
+              >
+                <Text style={styles.modalButtonText}>Go to Profile</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
