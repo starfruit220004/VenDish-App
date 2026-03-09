@@ -5,6 +5,7 @@ import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../../api/api'; 
 import FeedbackModal, { FeedbackAction, FeedbackVariant } from '../FeedbackModal';
+import { getTheme, spacing, typography, radii, layout } from '../../../constants/theme';
 
 type DrawerParamList = {
   Tabs: undefined;
@@ -17,7 +18,8 @@ type SignupNavigationProp = DrawerNavigationProp<DrawerParamList, 'Signup'>;
 export default function Signup() {
   const navigation = useNavigation<SignupNavigationProp>();
   const scheme = useColorScheme();
-  const isDarkMode = scheme === 'dark';
+  const isDark = scheme === 'dark';
+  const theme = getTheme(isDark);
 
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
@@ -28,8 +30,8 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState('');
   
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // <-- Password visibility toggle
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // <-- Confirm Password visibility toggle
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [feedbackModal, setFeedbackModal] = useState<{
     visible: boolean;
     title: string;
@@ -119,9 +121,7 @@ export default function Signup() {
     }
   };
 
-  const inputStyle = [styles.input, { color: isDarkMode ? '#FFF' : '#424242' }];
-  const containerStyle = [styles.inputContainer, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }];
-  const iconColor = isDarkMode ? '#E0E0E0' : '#757575';
+  const iconColor = theme.textMuted;
 
   return (
     <KeyboardAvoidingView
@@ -130,87 +130,86 @@ export default function Signup() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={[styles.container, { backgroundColor: isDarkMode ? '#000' : '#FFEBEE' }]}>
+          <View style={[styles.container, { backgroundColor: theme.background }]}>
             <View style={styles.logoContainer}>
               <Image
                 source={require('../../../assets/images/Logo2.jpg')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
-              <Text style={[styles.title, { color: isDarkMode ? '#FFF' : '#B71C1C' }]}>Create Account</Text>
-              <Text style={[styles.subtitle, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>Sign up to get started</Text>
+              <Text style={[styles.title, { color: theme.accentText }]}>Create Account</Text>
+              <Text style={[styles.subtitle, { color: theme.textMuted }]}>Sign up to get started</Text>
             </View>
 
             <View style={styles.formContainer}>
-              <View style={containerStyle}>
+              <View style={[styles.inputContainer, { backgroundColor: theme.surface }, theme.cardShadow]}>
                 <Ionicons name="person-outline" size={20} color={iconColor} style={styles.inputIcon} />
-                <TextInput style={inputStyle} placeholder="First Name" placeholderTextColor="#9E9E9E" value={firstName} onChangeText={setFirstName} autoCapitalize="words" />
+                <TextInput style={[styles.input, { color: theme.textPrimary }]} placeholder="First Name" placeholderTextColor={theme.textDisabled} value={firstName} onChangeText={setFirstName} autoCapitalize="words" />
               </View>
 
-              <View style={containerStyle}>
+              <View style={[styles.inputContainer, { backgroundColor: theme.surface }, theme.cardShadow]}>
                 <Ionicons name="person-outline" size={20} color={iconColor} style={styles.inputIcon} />
-                <TextInput style={inputStyle} placeholder="Middle Name (Optional)" placeholderTextColor="#999" value={middleName} onChangeText={setMiddleName} />
+                <TextInput style={[styles.input, { color: theme.textPrimary }]} placeholder="Middle Name (Optional)" placeholderTextColor={theme.textDisabled} value={middleName} onChangeText={setMiddleName} />
               </View>
 
-              <View style={containerStyle}>
+              <View style={[styles.inputContainer, { backgroundColor: theme.surface }, theme.cardShadow]}>
                 <Ionicons name="person-outline" size={20} color={iconColor} style={styles.inputIcon} />
-                <TextInput style={inputStyle} placeholder="Last Name" placeholderTextColor="#9E9E9E" value={lastName} onChangeText={setLastName} autoCapitalize="words" />
+                <TextInput style={[styles.input, { color: theme.textPrimary }]} placeholder="Last Name" placeholderTextColor={theme.textDisabled} value={lastName} onChangeText={setLastName} autoCapitalize="words" />
               </View>
 
-              <View style={containerStyle}>
+              <View style={[styles.inputContainer, { backgroundColor: theme.surface }, theme.cardShadow]}>
                 <Ionicons name="at-outline" size={20} color={iconColor} style={styles.inputIcon} />
-                <TextInput style={inputStyle} placeholder="Username" placeholderTextColor="#9E9E9E" value={username} onChangeText={setUsername} autoCapitalize="none" />
+                <TextInput style={[styles.input, { color: theme.textPrimary }]} placeholder="Username" placeholderTextColor={theme.textDisabled} value={username} onChangeText={setUsername} autoCapitalize="none" />
               </View>
 
-              <View style={containerStyle}>
+              <View style={[styles.inputContainer, { backgroundColor: theme.surface }, theme.cardShadow]}>
                 <Ionicons name="mail-outline" size={20} color={iconColor} style={styles.inputIcon} />
-                <TextInput style={inputStyle} placeholder="Email" placeholderTextColor="#9E9E9E" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                <TextInput style={[styles.input, { color: theme.textPrimary }]} placeholder="Email" placeholderTextColor={theme.textDisabled} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
               </View>
 
-              {/* Password Field with Eye Icon */}
-              <View style={containerStyle}>
+              <View style={[styles.inputContainer, { backgroundColor: theme.surface }, theme.cardShadow]}>
                 <Ionicons name="lock-closed-outline" size={20} color={iconColor} style={styles.inputIcon} />
                 <TextInput
-                  style={inputStyle}
+                  style={[styles.input, { color: theme.textPrimary }]}
                   placeholder="Password"
-                  placeholderTextColor="#9E9E9E"
+                  placeholderTextColor={theme.textDisabled}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: spacing.xxs }}>
                   <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={iconColor} />
                 </TouchableOpacity>
               </View>
 
-              {/* Confirm Password Field with Eye Icon */}
-              <View style={containerStyle}>
+              <View style={[styles.inputContainer, { backgroundColor: theme.surface }, theme.cardShadow]}>
                 <Ionicons name="lock-closed-outline" size={20} color={iconColor} style={styles.inputIcon} />
                 <TextInput
-                  style={inputStyle}
+                  style={[styles.input, { color: theme.textPrimary }]}
                   placeholder="Confirm Password"
-                  placeholderTextColor="#9E9E9E"
+                  placeholderTextColor={theme.textDisabled}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
                 />
-                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: 4 }}>
+                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: spacing.xxs }}>
                   <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={20} color={iconColor} />
                 </TouchableOpacity>
               </View>
 
               <TouchableOpacity
-                style={[styles.signupButton, isLoading && styles.signupButtonDisabled]}
+                style={[styles.signupButton, { backgroundColor: theme.accent }, isLoading && styles.signupButtonDisabled]}
                 onPress={handleSignup}
                 disabled={isLoading}
+                activeOpacity={0.85}
               >
                 <Text style={styles.signupButtonText}>{isLoading ? 'Creating Account...' : 'Sign Up'}</Text>
               </TouchableOpacity>
 
               <View style={styles.loginContainer}>
-                <Text style={[styles.loginText, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>Already have an account? </Text>
+                <Text style={[styles.loginText, { color: theme.textMuted }]}>Already have an account? </Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Login')} disabled={isLoading}>
-                  <Text style={[styles.loginLink, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>Login</Text>
+                  <Text style={[styles.loginLink, { color: theme.accent }]}>Login</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -232,26 +231,25 @@ export default function Signup() {
 
 const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1 },
-  container: { flex: 1, padding: 20, justifyContent: 'center', minHeight: '100%' },
-  logoContainer: { alignItems: 'center', marginBottom: 30 },
-  logoImage: { width: 120, height: 120, marginBottom: 20, borderRadius: 60 },
-  title: { fontSize: 32, fontWeight: 'bold', marginBottom: 8 },
-  subtitle: { fontSize: 16 },
-  formContainer: { width: '100%', paddingBottom: 40 },
+  container: { flex: 1, padding: layout.screenPadding, justifyContent: 'center', minHeight: '100%' },
+  logoContainer: { alignItems: 'center', marginBottom: spacing['3xl'] },
+  logoImage: { width: 120, height: 120, marginBottom: spacing.xl, borderRadius: radii.full },
+  title: { ...typography.displaySm, marginBottom: spacing.xs },
+  subtitle: { ...typography.bodyMd },
+  formContainer: { width: '100%', paddingBottom: spacing['4xl'] },
   inputContainer: {
-    flexDirection: 'row', alignItems: 'center', marginBottom: 16,
-    borderRadius: 12, paddingHorizontal: 12, elevation: 2, height: 50,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2,
+    flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg,
+    borderRadius: radii.lg, paddingHorizontal: spacing.md, height: 52,
   },
-  inputIcon: { marginRight: 10 },
-  input: { flex: 1, height: '100%', fontSize: 16 },
+  inputIcon: { marginRight: spacing.md },
+  input: { flex: 1, height: '100%', ...typography.bodyLg },
   signupButton: {
-    backgroundColor: '#B71C1C', paddingVertical: 16, borderRadius: 12,
-    alignItems: 'center', marginTop: 10, marginBottom: 20
+    paddingVertical: spacing.lg, borderRadius: radii.lg,
+    alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.xl,
   },
   signupButtonDisabled: { opacity: 0.6 },
-  signupButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+  signupButtonText: { color: '#FFF', ...typography.labelLg },
   loginContainer: { flexDirection: 'row', justifyContent: 'center' },
-  loginText: { fontSize: 14 },
-  loginLink: { fontSize: 14, fontWeight: 'bold' },
+  loginText: { ...typography.bodySm },
+  loginLink: { ...typography.labelSm },
 });

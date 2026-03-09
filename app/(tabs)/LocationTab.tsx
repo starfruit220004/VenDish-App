@@ -1,146 +1,177 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, useColorScheme, Image, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, useColorScheme, Image, ActivityIndicator, ScrollView, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../api/api';
+import { getTheme, spacing, typography, radii, layout, palette } from '../../constants/theme';
 
 export default function LocationTab() {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
+  const theme = getTheme(isDark);
 
   const [address, setAddress] = useState('Loading address...');
+  const [openHours, setOpenHours] = useState('Loading...');
+  const [locationImage, setLocationImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const fetchLocation = async () => {
-      try {
-        // The backend viewset returns the latest contact object
-        const response = await api.get(`/firstapp/contact-page/`);
-        
-        if (response.data && response.data.address) {
-          setAddress(response.data.address);
-        } else {
-          setAddress('Baliwasan, Philippines'); // Fallback
-        }
-      } catch (error) {
-        console.error("Failed to fetch location", error);
-        setAddress('Baliwasan, Philippines'); // Fallback on error
-      } finally {
-        setLoading(false);
+  const fetchLocationData = useCallback(async () => {
+    try {
+      const [contactRes, aboutRes] = await Promise.all([
+        api.get('/firstapp/contact-page/'),
+        api.get('/firstapp/about/'),
+      ]);
+
+      // Address from contact page
+      if (contactRes.data && contactRes.data.address) {
+        setAddress(contactRes.data.address);
+      } else {
+        setAddress('Baliwasan, Philippines');
       }
-    };
 
-    fetchLocation();
+      // Open hours and location image from about page
+      const aboutData = Array.isArray(aboutRes.data)
+        ? aboutRes.data[aboutRes.data.length - 1]
+        : aboutRes.data;
+
+      if (aboutData) {
+        if (aboutData.open_hours) {
+          setOpenHours(aboutData.open_hours);
+        } else {
+          setOpenHours('Everyday: 7:00 AM – 10:00 PM');
+        }
+        if (aboutData.location_image) {
+          setLocationImage(aboutData.location_image);
+        }
+      } else {
+        setOpenHours('Everyday: 7:00 AM – 10:00 PM');
+      }
+    } catch (error) {
+      console.error("Failed to fetch location data", error);
+      setAddress('Baliwasan, Philippines');
+      setOpenHours('Everyday: 7:00 AM – 10:00 PM');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
+  useEffect(() => {
+    fetchLocationData();
+  }, [fetchLocationData]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchLocationData();
+  }, [fetchLocationData]);
+
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? "#000" : "#FFEBEE" }]}>
-      
-      {/* Header */}
-      <Text style={[styles.headerTitle, { color: isDark ? "#FFFFFF" : "#B71C1C" }]}>
+    <ScrollView
+      style={[styles.scrollContainer, { backgroundColor: theme.background }]}
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[theme.accent]}
+          tintColor={theme.accent}
+        />
+      }
+    >
+      <Text style={[styles.headerTitle, { color: theme.accentText }]}>
         Our Location
       </Text>
 
-      {/* Map Placeholder */}
-      <View style={[styles.mapBox, { backgroundColor: isDark ? "#1E1E1E" : "#FFFFFF" }]}>
+      {/* Map */}
+      <View style={[styles.mapBox, { backgroundColor: theme.surface }, theme.cardShadow]}>
         <Image
-          source={require('../../assets/images/map.jpg')}
+          source={locationImage ? { uri: locationImage } : require('../../assets/images/map.jpg')}
           style={styles.mapImage}
           resizeMode="cover"
         />
       </View>
 
-      {/* Address Card */}
-      <View style={[styles.card, { backgroundColor: isDark ? "#1E1E1E" : "#FFFFFF" }]}>
-        <Ionicons name="location" size={28} color={isDark ? "#FF5252" : "#B71C1C"} />
-
-        <View style={{ marginLeft: 10, flex: 1 }}>
-          <Text style={[styles.cardTitle, { color: isDark ? "#FFFFFF" : "#212121" }]}>
+      {/* Address */}
+      <View style={[styles.card, { backgroundColor: theme.surface }, theme.cardShadow]}>
+        <View style={[styles.cardIconWrap, { backgroundColor: theme.accentSoft }]}>
+          <Ionicons name="location" size={22} color={theme.accent} />
+        </View>
+        <View style={styles.cardTextWrap}>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
             Kuya Vince Karinderya
           </Text>
-
           {loading ? (
-             <ActivityIndicator size="small" color={isDark ? "#FFF" : "#B71C1C"} style={{alignSelf: 'flex-start', marginTop: 5}}/>
+            <ActivityIndicator size="small" color={theme.accent} style={{ alignSelf: 'flex-start', marginTop: spacing.xxs }} />
           ) : (
-             <Text style={[styles.cardSubtitle, { color: isDark ? "#BDBDBD" : "#616161" }]}>
-               {address}
-             </Text>
+            <Text style={[styles.cardSubtitle, { color: theme.textMuted }]}>
+              {address}
+            </Text>
           )}
         </View>
       </View>
 
-      {/* Hours Card */}
-      <View style={[styles.card, { backgroundColor: isDark ? "#1E1E1E" : "#FFFFFF" }]}>
-        <Ionicons name="time-outline" size={28} color={isDark ? "#FFB74D" : "#F57C00"} />
-
-        <View style={{ marginLeft: 10 }}>
-          <Text style={[styles.cardTitle, { color: isDark ? "#FFFFFF" : "#212121" }]}>
+      {/* Hours */}
+      <View style={[styles.card, { backgroundColor: theme.surface }, theme.cardShadow]}>
+        <View style={[styles.cardIconWrap, { backgroundColor: palette.warningSoft }]}>
+          <Ionicons name="time-outline" size={22} color={palette.warning} />
+        </View>
+        <View style={styles.cardTextWrap}>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
             Open Hours
           </Text>
-
-          <Text style={[styles.cardSubtitle, { color: isDark ? "#BDBDBD" : "#616161" }]}>
-            Everyday: 7:00 AM – 10:00 PM  
-          </Text>
+          {loading ? (
+            <ActivityIndicator size="small" color={palette.warning} style={{ alignSelf: 'flex-start', marginTop: spacing.xxs }} />
+          ) : (
+            <Text style={[styles.cardSubtitle, { color: theme.textMuted }]}>
+              {openHours}
+            </Text>
+          )}
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    alignItems: "center", 
-    paddingTop: 30,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFEBEE' 
+  scrollContainer: {
+    flex: 1,
   },
-
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: "bold",
-    marginBottom: 25
+  container: {
+    alignItems: 'center' as const,
+    paddingTop: spacing['3xl'],
+    paddingHorizontal: layout.screenPadding,
+    paddingBottom: spacing['2xl'],
   },
+  headerTitle: { ...typography.displaySm, marginBottom: spacing['2xl'] },
 
   mapBox: {
-    width: "100%",
+    width: '100%',
     height: 230,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 25,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    overflow: 'hidden',
+    borderRadius: radii.xl,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    marginBottom: spacing['2xl'],
+    overflow: 'hidden' as const,
   },
-
-  mapImage: {
-    width: "100%",
-    height: "100%",
-  },
+  mapImage: { width: '100%', height: '100%' },
 
   card: {
-    width: "100%",
-    flexDirection: "row",
-    padding: 16,
-    borderRadius: 14,
-    marginBottom: 16,
-    alignItems: "center",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    width: '100%',
+    flexDirection: 'row' as const,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    marginBottom: spacing.lg,
+    alignItems: 'center' as const,
   },
-
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+  cardIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.lg,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginRight: spacing.md,
   },
-
-  cardSubtitle: {
-    fontSize: 13,
-    marginTop: 4,
-    lineHeight: 18
-  },
+  cardTextWrap: { flex: 1 },
+  cardTitle: { ...typography.headingSm },
+  cardSubtitle: { ...typography.bodySm, marginTop: spacing.xxs },
 });

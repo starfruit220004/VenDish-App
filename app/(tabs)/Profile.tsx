@@ -20,12 +20,14 @@ import { useAuth } from '../context/AuthContext';
 import { deactivateAccount } from '../services/authServices';
 import api from '../../api/api';
 import FeedbackModal, { FeedbackAction, FeedbackVariant } from './FeedbackModal';
+import { getTheme, spacing, typography, radii, palette } from '../../constants/theme';
 
 export default function Profile() {
   const { userData, logout, updateUserData } = useAuth();
   const navigation = useNavigation();
   const scheme = useColorScheme();
-  const isDarkMode = scheme === 'dark';
+  const isDark = scheme === 'dark';
+  const theme = getTheme(isDark);
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -226,61 +228,60 @@ export default function Profile() {
     return userData?.username?.slice(0, 2).toUpperCase() || 'KV';
   };
 
-  // Colors
-  const textColor = isDarkMode ? '#FFF' : '#333';
-  const subTextColor = isDarkMode ? '#CCC' : '#666';
-  const bgColor = isDarkMode ? '#000' : '#F9F9F9';
-  const cardColor = isDarkMode ? '#1C1C1E' : '#FFF';
-
   return (
-    <ScrollView style={[styles.container, { backgroundColor: bgColor }]}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       
       {/* Header Section */}
-      <View style={[styles.header, { backgroundColor: cardColor }]}>
+      <View style={[styles.header, { backgroundColor: theme.surface }, theme.cardShadow]}>
         <View style={styles.avatarContainer}>
             {(editProfilePic || userData?.profilePic) ? (
                 <Image source={{ uri: editProfilePic || userData?.profilePic }} style={styles.avatar} />
             ) : (
-                <View style={[styles.avatarPlaceholder, { backgroundColor: '#B71C1C' }]}>
+                <View style={[styles.avatarPlaceholder, { backgroundColor: theme.accent }]}>
                     <Text style={styles.avatarInitials}>{getInitials()}</Text>
                 </View>
             )}
             {isEditing && (
-              <TouchableOpacity style={styles.editIconBadge} onPress={pickProfileImage}>
-                  <Ionicons name="camera" size={14} color="#FFF" />
+              <TouchableOpacity style={[styles.editIconBadge, { backgroundColor: theme.surfaceElevated }]} onPress={pickProfileImage}>
+                  <Ionicons name="camera" size={14} color={theme.accent} />
               </TouchableOpacity>
             )}
         </View>
 
-        <Text style={[styles.name, { color: textColor }]}>
+        <Text style={[styles.name, { color: theme.textPrimary }]}>
             {userData?.firstname} {userData?.middlename ? userData.middlename + ' ' : ''}{userData?.lastname}
         </Text>
-        <Text style={[styles.username, { color: subTextColor }]}>
+        <Text style={[styles.username, { color: theme.textSecondary }]}>
             @{userData?.username || 'user'}
         </Text>
       </View>
 
       {/* Info Section */}
       <View style={styles.section}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <Text style={[styles.sectionTitle, { color: subTextColor, marginBottom: 0 }]}>Personal Information</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+          {/* Added flex: 1 so the title doesn't crush the buttons on small screens */}
+          <Text style={[styles.sectionTitle, { color: theme.textMuted, marginBottom: 0, flex: 1 }]}>
+            Personal Information
+          </Text>
+          
           {!isEditing ? (
-            <TouchableOpacity onPress={startEditing} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="create-outline" size={18} color="#B71C1C" />
-              <Text style={{ color: '#B71C1C', fontWeight: '600', fontSize: 14 }}>Edit</Text>
+            <TouchableOpacity onPress={startEditing} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Ionicons name="create-outline" size={18} color={theme.accent} />
+              {/* Added flexShrink: 0 to force the text to stay on one line */}
+              <Text style={[typography.labelMd, { color: theme.accent, flexShrink: 0 }]}>Edit</Text>
             </TouchableOpacity>
           ) : (
-            <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
               <TouchableOpacity onPress={cancelEditing} disabled={isSaving}>
-                <Text style={{ color: subTextColor, fontWeight: '600', fontSize: 14 }}>Cancel</Text>
+                <Text style={[typography.labelSm, { color: theme.textMuted, flexShrink: 0 }]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={saveProfile} disabled={isSaving} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <TouchableOpacity onPress={saveProfile} disabled={isSaving} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
                 {isSaving ? (
-                  <ActivityIndicator size="small" color="#B71C1C" />
+                  <ActivityIndicator size="small" color={theme.accent} />
                 ) : (
                   <>
-                    <Ionicons name="checkmark-circle-outline" size={18} color="#B71C1C" />
-                    <Text style={{ color: '#B71C1C', fontWeight: '600', fontSize: 14 }}>Save</Text>
+                    <Ionicons name="checkmark-circle-outline" size={18} color={theme.accent} />
+                    <Text style={[typography.labelSm, { color: theme.accent, flexShrink: 0 }]}>Save</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -288,70 +289,70 @@ export default function Profile() {
           )}
         </View>
         
-        <View style={[styles.infoCard, { backgroundColor: cardColor }]}>
+        <View style={[styles.infoCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
             <View style={styles.infoRow}>
                 <View style={styles.infoLabelContainer}>
-                    <Ionicons name="mail-outline" size={20} color="#B71C1C" />
-                    <Text style={[styles.infoLabel, { color: subTextColor }]}>Email</Text>
+                    <Ionicons name="mail-outline" size={20} color={theme.accent} />
+                    <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Email</Text>
                 </View>
-                <Text style={[styles.infoValue, { color: textColor }]}>{userData?.email || 'N/A'}</Text>
+                <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{userData?.email || 'N/A'}</Text>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
 
             <View style={styles.infoRow}>
                  <View style={styles.infoLabelContainer}>
-                    <Ionicons name="person-outline" size={20} color="#B71C1C" />
-                    <Text style={[styles.infoLabel, { color: subTextColor }]}>Full Name</Text>
+                    <Ionicons name="person-outline" size={20} color={theme.accent} />
+                    <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Full Name</Text>
                 </View>
-                <Text style={[styles.infoValue, { color: textColor }]}>
+                <Text style={[styles.infoValue, { color: theme.textPrimary }]}>
                     {userData?.firstname} {userData?.middlename ? userData.middlename + '. ' : ''}{userData?.lastname}
                 </Text>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
 
             {/* Phone */}
             <View style={styles.infoRow}>
                 <View style={styles.infoLabelContainer}>
-                    <Ionicons name="call-outline" size={20} color="#B71C1C" />
-                    <Text style={[styles.infoLabel, { color: subTextColor }]}>Phone</Text>
+                    <Ionicons name="call-outline" size={20} color={theme.accent} />
+                    <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Phone</Text>
                 </View>
                 {isEditing ? (
                   <TextInput
-                    style={[styles.editInput, { color: textColor, borderColor: isDarkMode ? '#555' : '#DDD', backgroundColor: isDarkMode ? '#2C2C2E' : '#FAFAFA' }]}
+                    style={[styles.editInput, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
                     value={editPhone}
                     onChangeText={setEditPhone}
                     placeholder="Enter phone number"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={theme.textDisabled}
                     keyboardType="phone-pad"
                   />
                 ) : (
-                  <Text style={[styles.infoValue, { color: userData?.phone ? textColor : '#999' }]}>
+                  <Text style={[styles.infoValue, { color: userData?.phone ? theme.textPrimary : theme.textDisabled }]}>
                     {userData?.phone || 'Not set'}
                   </Text>
                 )}
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
 
             {/* Address */}
             <View style={styles.infoRow}>
                 <View style={styles.infoLabelContainer}>
-                    <Ionicons name="location-outline" size={20} color="#B71C1C" />
-                    <Text style={[styles.infoLabel, { color: subTextColor }]}>Address</Text>
+                    <Ionicons name="location-outline" size={20} color={theme.accent} />
+                    <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Address</Text>
                 </View>
                 {isEditing ? (
                   <TextInput
-                    style={[styles.editInput, { color: textColor, borderColor: isDarkMode ? '#555' : '#DDD', backgroundColor: isDarkMode ? '#2C2C2E' : '#FAFAFA' }]}
+                    style={[styles.editInput, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
                     value={editAddress}
                     onChangeText={setEditAddress}
                     placeholder="Enter your address"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={theme.textDisabled}
                     multiline
                   />
                 ) : (
-                  <Text style={[styles.infoValue, { color: userData?.address ? textColor : '#999', flex: 1, textAlign: 'right' }]}>
+                  <Text style={[styles.infoValue, { color: userData?.address ? theme.textPrimary : theme.textDisabled, flex: 1, textAlign: 'right' }]}>
                     {userData?.address || 'Not set'}
                   </Text>
                 )}
@@ -361,25 +362,24 @@ export default function Profile() {
 
       {/* Account Actions Section */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: subTextColor }]}>Account</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Account</Text>
         
-        <View style={[styles.infoCard, { backgroundColor: cardColor }]}>
+        <View style={[styles.infoCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
             
-            {/* [REPLACED] Settings -> Deactivate Account */}
             <TouchableOpacity style={styles.menuItem} onPress={handleDeactivate}>
                 <View style={styles.menuItemLeft}>
-                    <Ionicons name="trash-outline" size={22} color={textColor} />
-                    <Text style={[styles.menuItemText, { color: textColor }]}>Deactivate Account</Text>
+                    <Ionicons name="trash-outline" size={22} color={theme.textPrimary} />
+                    <Text style={[styles.menuItemText, { color: theme.textPrimary }]}>Deactivate Account</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={subTextColor} />
+                <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
             </TouchableOpacity>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
 
             <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
                 <View style={styles.menuItemLeft}>
-                    <Ionicons name="log-out-outline" size={22} color="#D32F2F" />
-                    <Text style={[styles.menuItemText, { color: "#D32F2F" }]}>Log Out</Text>
+                    <Ionicons name="log-out-outline" size={22} color={palette.error} />
+                    <Text style={[styles.menuItemText, { color: palette.error }]}>Log Out</Text>
                 </View>
             </TouchableOpacity>
         </View>
@@ -394,23 +394,23 @@ export default function Profile() {
       >
         <KeyboardAvoidingView 
             behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.modalOverlay}
+            style={[styles.modalOverlay, { backgroundColor: theme.modalOverlay }]}
         >
-          <View style={[styles.modalContent, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
             <View style={styles.modalHeader}>
-                <View style={[styles.warningIcon, { backgroundColor: '#FFEBEE' }]}>
-                     <Ionicons name="warning" size={32} color="#D32F2F" />
+                <View style={[styles.warningIcon, { backgroundColor: palette.errorSoft }]}>
+                     <Ionicons name="warning" size={32} color={palette.error} />
                 </View>
-                <Text style={[styles.modalTitle, { color: isDarkMode ? '#FFF' : '#333' }]}>
+                <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
                     Deactivate Account?
                 </Text>
             </View>
             
-            <Text style={[styles.modalText, { color: isDarkMode ? '#CCC' : '#666' }]}>
+            <Text style={[styles.modalText, { color: theme.textSecondary }]}>
               This action will log you out immediately. Your account will be permanently deleted after 30 days unless you reactivate it.
             </Text>
 
-            <Text style={[styles.label, { color: isDarkMode ? '#FFF' : '#333' }]}>
+            <Text style={[styles.label, { color: theme.textPrimary }]}>
                 Confirm Password
             </Text>
             
@@ -418,13 +418,13 @@ export default function Profile() {
               style={[
                   styles.input, 
                   { 
-                      color: isDarkMode ? '#FFF' : '#333',
-                      borderColor: isDarkMode ? '#555' : '#DDD',
-                      backgroundColor: isDarkMode ? '#2C2C2E' : '#FAFAFA'
+                      color: theme.textPrimary,
+                      borderColor: theme.border,
+                      backgroundColor: theme.surfaceElevated
                   }
               ]}
               placeholder="Enter your password"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.textDisabled}
               secureTextEntry
               value={password}
               onChangeText={setPassword}
@@ -433,14 +433,14 @@ export default function Profile() {
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[styles.modalButton, { backgroundColor: theme.surfaceElevated }]}
                 onPress={() => {
                     setDeactivateModalVisible(false);
                     setPassword('');
                 }}
                 disabled={isLoading}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, { color: theme.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -474,104 +474,100 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { alignItems: 'center', paddingVertical: 30, marginBottom: 20, borderBottomLeftRadius: 20, borderBottomRightRadius: 20, elevation: 2 },
-  avatarContainer: { position: 'relative', marginBottom: 15 },
-  avatar: { width: 100, height: 100, borderRadius: 50 },
-  avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center' },
-  avatarInitials: { color: '#FFF', fontSize: 36, fontWeight: 'bold' },
-  editIconBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#333', padding: 6, borderRadius: 15, borderWidth: 2, borderColor: '#FFF' },
-  name: { fontSize: 24, fontWeight: 'bold', marginBottom: 4 },
-  username: { fontSize: 16 },
-  section: { paddingHorizontal: 20, marginBottom: 25 },
-  sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 },
-  infoCard: { borderRadius: 16, padding: 5, elevation: 1 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 15 },
-  infoLabelContainer: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  infoLabel: { fontSize: 16 },
-  infoValue: { fontSize: 16, fontWeight: '500' },
-  editInput: { fontSize: 15, fontWeight: '500', borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minWidth: 140, textAlign: 'right' },
-  divider: { height: 1, backgroundColor: 'rgba(150, 150, 150, 0.1)', marginHorizontal: 15 },
-  menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 15 },
-  menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  menuItemText: { fontSize: 16, fontWeight: '500' },
-  
+  header: {
+    alignItems: 'center', paddingVertical: spacing['2xl'], marginBottom: spacing.xl,
+    borderBottomLeftRadius: radii['2xl'], borderBottomRightRadius: radii['2xl'],
+  },
+  avatarContainer: { position: 'relative', marginBottom: spacing.lg },
+  avatar: { width: 100, height: 100, borderRadius: radii.full },
+  avatarPlaceholder: { width: 100, height: 100, borderRadius: radii.full, justifyContent: 'center', alignItems: 'center' },
+  avatarInitials: { color: '#FFF', ...typography.displaySm },
+  editIconBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    padding: spacing.xs, borderRadius: radii.full, borderWidth: 2, borderColor: '#FFF',
+  },
+  name: { ...typography.headingLg, marginBottom: spacing.xxs },
+  username: { ...typography.bodyMd },
+  section: { paddingHorizontal: spacing.xl, marginBottom: spacing['2xl'] },
+  sectionTitle: { ...typography.caption, fontWeight: '600' as const, marginBottom: spacing.md, textTransform: 'uppercase' as const, letterSpacing: 1 },
+  infoCard: { borderRadius: radii.xl, padding: spacing.xxs },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.lg },
+  infoLabelContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  infoLabel: { ...typography.bodyMd },
+  infoValue: { ...typography.bodyMd, fontWeight: '500' as const },
+  editInput: { ...typography.bodySm, fontWeight: '500' as const, borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, minWidth: 140, textAlign: 'right' },
+  divider: { height: 1, marginHorizontal: spacing.lg },
+  menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.lg },
+  menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md},
+  menuItemText: { ...typography.bodyLg, fontWeight: '500' as const },
+
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.xl,
   },
   modalContent: {
     width: '100%',
     maxWidth: 340,
-    borderRadius: 20,
-    padding: 24,
-    elevation: 5,
+    borderRadius: radii['2xl'],
+    padding: spacing.xl,
   },
   modalHeader: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   warningIcon: {
     width: 60,
     height: 60,
-    borderRadius: 30,
+    borderRadius: radii.full,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    ...typography.headingMd,
     textAlign: 'center',
   },
   modalText: {
-    fontSize: 14,
+    ...typography.bodySm,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.xl,
     lineHeight: 20,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
+    ...typography.labelSm,
+    marginBottom: spacing.sm,
     alignSelf: 'flex-start',
   },
   input: {
     width: '100%',
-    padding: 12,
+    padding: spacing.md,
     borderWidth: 1,
-    borderRadius: 12,
-    marginBottom: 24,
-    fontSize: 16,
+    borderRadius: radii.lg,
+    marginBottom: spacing.xl,
+    ...typography.bodyMd,
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: spacing.lg,
+    borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelButton: {
-    backgroundColor: '#F5F5F5',
-  },
   deleteButton: {
-    backgroundColor: '#D32F2F',
+    backgroundColor: palette.error,
   },
   cancelButtonText: {
-    color: '#333',
-    fontWeight: '600',
-    fontSize: 16,
+    ...typography.labelMd,
   },
   deleteButtonText: {
     color: '#FFF',
-    fontWeight: '600',
-    fontSize: 16,
+    ...typography.labelMd,
   },
 });

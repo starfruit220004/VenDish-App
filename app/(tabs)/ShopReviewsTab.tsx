@@ -5,12 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useReviews } from './ReviewsContext';
 import WriteShopReview from './WriteShopReview';
+import { getTheme, spacing, typography, radii, layout, palette } from '../../constants/theme';
 
 const Stack = createNativeStackNavigator();
 
 function ShopReviewsHome({ navigation }: any) {
   const scheme = useColorScheme();
-  const isDarkMode = scheme === 'dark';
+  const isDark = scheme === 'dark';
+  const theme = getTheme(isDark);
   const { shopReviews, getAverageShopRating, refreshReviews } = useReviews();
 
   useFocusEffect(
@@ -18,7 +20,7 @@ function ShopReviewsHome({ navigation }: any) {
       refreshReviews();
     }, [])
   );
-  
+
   const [showAllReviews, setShowAllReviews] = useState(false);
   const averageRating = getAverageShopRating();
   const displayedReviews = showAllReviews ? shopReviews : shopReviews.slice(0, 5);
@@ -28,74 +30,77 @@ function ShopReviewsHome({ navigation }: any) {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const renderStars = (rating: number) => {
+  const renderStars = (rating: number, size = 20) => {
     const roundedRating = Math.round(rating);
     return (
       <View style={styles.starsContainer}>
         {[...Array(5)].map((_, i) => (
-          <Ionicons key={i} name={i < roundedRating ? 'star' : 'star-outline'} size={20} color="#FFC107" />
+          <Ionicons key={i} name={i < roundedRating ? 'star' : 'star-outline'} size={size} color={palette.warning} />
         ))}
       </View>
     );
   };
 
   return (
-    <ScrollView 
-      style={[styles.container, { backgroundColor: isDarkMode ? '#000' : '#FFEBEE' }]}
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
     >
       {/* Header */}
       <View style={styles.header}>
-        <Ionicons name="restaurant" size={64} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
-        <Text style={[styles.title, { color: isDarkMode ? '#FFFFFF' : '#B71C1C' }]}>
+        <View style={[styles.headerIconWrap, { backgroundColor: theme.accentSoft }]}>
+          <Ionicons name="restaurant" size={36} color={theme.accent} />
+        </View>
+        <Text style={[styles.title, { color: theme.accentText }]}>
           Kuya Vince Carenderia
         </Text>
-        <Text style={[styles.subtitle, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
+        <Text style={[styles.subtitle, { color: theme.textMuted }]}>
           Shop Reviews
         </Text>
       </View>
 
       {/* Overall Rating Card */}
-      <View style={[styles.ratingCard, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
+      <View style={[styles.ratingCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
         <View style={styles.ratingContent}>
-          <Text style={[styles.ratingNumber, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+          <Text style={[styles.ratingNumber, { color: theme.accent }]}>
             {averageRating > 0 ? averageRating.toFixed(1) : '0.0'}
           </Text>
           {renderStars(averageRating)}
-          <Text style={[styles.ratingCount, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
+          <Text style={[styles.ratingCount, { color: theme.textMuted }]}>
             {shopReviews.length} {shopReviews.length === 1 ? 'review' : 'reviews'}
           </Text>
         </View>
 
         <TouchableOpacity
-          style={styles.writeReviewButton}
+          style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
           onPress={() => navigation.navigate('WriteShopReview')}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
-          <Ionicons name="create-outline" size={20} color="#FFFFFF" />
+          <Ionicons name="create-outline" size={20} color="#FFF" />
           <Text style={styles.writeReviewText}>Write a Review</Text>
         </TouchableOpacity>
       </View>
 
       {/* Reviews Section */}
       <View style={styles.reviewsSection}>
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
+        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
           Customer Reviews
         </Text>
 
         {shopReviews.length === 0 ? (
-          <View style={[styles.noReviewsContainer, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
-            <Ionicons name="chatbox-outline" size={64} color={isDarkMode ? '#424242' : '#E0E0E0'} />
-            <Text style={[styles.noReviewsTitle, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
+          <View style={[styles.noReviewsContainer, { backgroundColor: theme.surface }, theme.cardShadow]}>
+            <Ionicons name="chatbox-outline" size={48} color={theme.textDisabled} />
+            <Text style={[styles.noReviewsTitle, { color: theme.textPrimary }]}>
               No reviews yet
             </Text>
-            <Text style={[styles.noReviewsText, { color: isDarkMode ? '#757575' : '#9E9E9E' }]}>
+            <Text style={[styles.noReviewsText, { color: theme.textMuted }]}>
               Be the first to review our shop!
             </Text>
             <TouchableOpacity
-              style={styles.firstReviewButton}
+              style={[styles.firstReviewButton, { backgroundColor: theme.accent }]}
               onPress={() => navigation.navigate('WriteShopReview')}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
               <Text style={styles.firstReviewButtonText}>Write First Review</Text>
             </TouchableOpacity>
@@ -103,45 +108,39 @@ function ShopReviewsHome({ navigation }: any) {
         ) : (
           <>
             {displayedReviews.map(review => (
-              <View 
-                key={review.id} 
-                style={[
-                  styles.reviewCard, 
-                  { 
-                    backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF',
-                    borderColor: isDarkMode ? '#2C2C2E' : '#F0F0F0'
-                  }
-                ]}
+              <View
+                key={review.id}
+                style={[styles.reviewCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }, theme.cardShadow]}
               >
                 <View style={styles.reviewHeader}>
                   <View style={styles.reviewAuthor}>
-                    <View style={[styles.reviewAvatar, { backgroundColor: isDarkMode ? '#2C2C2E' : '#F0F0F0' }]}>
-                      <Text style={[styles.reviewAvatarText, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+                    <View style={[styles.reviewAvatar, { backgroundColor: theme.accentSoft }]}>
+                      <Text style={[styles.reviewAvatarText, { color: theme.accent }]}>
                         {review.username.charAt(0).toUpperCase()}
                       </Text>
                     </View>
                     <View>
-                      <Text style={[styles.reviewUsername, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
+                      <Text style={[styles.reviewUsername, { color: theme.textPrimary }]}>
                         {review.username}
                       </Text>
-                      <Text style={[styles.reviewDate, { color: isDarkMode ? '#757575' : '#9E9E9E' }]}>
+                      <Text style={[styles.reviewDate, { color: theme.textDisabled }]}>
                         {formatDate(review.timestamp)}
                       </Text>
                     </View>
                   </View>
                   <View style={styles.reviewRating}>
                     {[...Array(5)].map((_, i) => (
-                      <Ionicons 
-                        key={i} 
-                        name={i < review.rating ? 'star' : 'star-outline'} 
-                        size={16} 
-                        color="#FFC107" 
+                      <Ionicons
+                        key={i}
+                        name={i < review.rating ? 'star' : 'star-outline'}
+                        size={15}
+                        color={palette.warning}
                       />
                     ))}
                   </View>
                 </View>
 
-                <Text style={[styles.reviewText, { color: isDarkMode ? '#BDBDBD' : '#616161' }]}>
+                <Text style={[styles.reviewText, { color: theme.textSecondary }]}>
                   {review.review}
                 </Text>
 
@@ -157,10 +156,10 @@ function ShopReviewsHome({ navigation }: any) {
                 onPress={() => setShowAllReviews(true)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.showMoreText, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+                <Text style={[styles.showMoreText, { color: theme.accent }]}>
                   Show all {shopReviews.length} reviews
                 </Text>
-                <Ionicons name="chevron-down" size={20} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
+                <Ionicons name="chevron-down" size={20} color={theme.accent} />
               </TouchableOpacity>
             )}
 
@@ -170,10 +169,10 @@ function ShopReviewsHome({ navigation }: any) {
                 onPress={() => setShowAllReviews(false)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.showMoreText, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+                <Text style={[styles.showMoreText, { color: theme.accent }]}>
                   Show less
                 </Text>
-                <Ionicons name="chevron-up" size={20} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
+                <Ionicons name="chevron-up" size={20} color={theme.accent} />
               </TouchableOpacity>
             )}
           </>
@@ -183,196 +182,114 @@ function ShopReviewsHome({ navigation }: any) {
   );
 }
 
-// Export with Stack Navigator
 export default function ShopReviewsTab() {
   return (
     <Stack.Navigator>
-      <Stack.Screen
-        name="ShopReviewsHome"
-        component={ShopReviewsHome}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="WriteShopReview"
-        component={WriteShopReview}
-        options={{ headerShown: false }}
-      />
+      <Stack.Screen name="ShopReviewsHome" component={ShopReviewsHome} options={{ headerShown: false }} />
+      <Stack.Screen name="WriteShopReview" component={WriteShopReview} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 30,
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing['4xl'],
   },
-  header: {
-    alignItems: 'center',
-    marginVertical: 5,
+
+  // ── Header ──────────────────────────────────────
+  header: { alignItems: 'center' as const, marginBottom: spacing.xl },
+  headerIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: radii.full,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginBottom: spacing.md,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 20,
-  },
+  title: { ...typography.displayMd, marginBottom: spacing.xxs },
+  subtitle: { ...typography.bodyMd },
+
+  // ── Rating Card ─────────────────────────────────
   ratingCard: {
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 24,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    alignItems: 'center',
+    borderRadius: radii.xl,
+    padding: spacing.xl,
+    marginBottom: spacing['2xl'],
+    alignItems: 'center' as const,
   },
-  ratingContent: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  ratingNumber: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    gap: 4,
-    marginBottom: 8,
-  },
-  ratingCount: {
-    fontSize: 14,
-  },
+  ratingContent: { alignItems: 'center' as const, marginBottom: spacing.xl },
+  ratingNumber: { fontSize: 52, fontWeight: '800' as const, marginBottom: spacing.sm },
+  starsContainer: { flexDirection: 'row' as const, gap: spacing.xxs, marginBottom: spacing.sm },
+  ratingCount: { ...typography.bodySm },
   writeReviewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#B71C1C',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    gap: 8,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing['2xl'],
+    borderRadius: radii.lg,
+    gap: spacing.sm,
     width: '100%',
   },
-  writeReviewText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  reviewsSection: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
+  writeReviewText: { color: '#FFF' },
+
+  // ── Reviews Section ─────────────────────────────
+  reviewsSection: { marginBottom: spacing.xl },
+  sectionTitle: { ...typography.headingLg, marginBottom: spacing.lg },
+
+  // ── Empty State ─────────────────────────────────
   noReviewsContainer: {
-    borderRadius: 16,
-    padding: 40,
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    borderRadius: radii.xl,
+    padding: spacing['3xl'],
+    alignItems: 'center' as const,
   },
-  noReviewsTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  noReviewsText: {
-    fontSize: 14,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
+  noReviewsTitle: { ...typography.headingMd, marginTop: spacing.lg, marginBottom: spacing.sm },
+  noReviewsText: { ...typography.bodyMd, marginBottom: spacing.xl, textAlign: 'center' as const },
   firstReviewButton: {
-    backgroundColor: '#B71C1C',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 10,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing['2xl'],
+    borderRadius: radii.md,
   },
-  firstReviewButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
+  firstReviewButtonText: { color: '#FFF', ...typography.labelMd },
+
+  // ── Review Card ─────────────────────────────────
   reviewCard: {
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
   reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'flex-start' as const,
+    marginBottom: spacing.md,
   },
-  reviewAuthor: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
+  reviewAuthor: { flexDirection: 'row' as const, alignItems: 'center' as const, flex: 1 },
   reviewAvatar: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+    borderRadius: radii.full,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginRight: spacing.md,
   },
-  reviewAvatarText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  reviewUsername: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  reviewDate: {
-    fontSize: 12,
-  },
-  reviewRating: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  reviewText: {
-    fontSize: 14,
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  reviewImage: {
-    width: '100%',
-    height: 220,
-    borderRadius: 12,
-    marginTop: 8,
-  },
+  reviewAvatarText: { ...typography.headingSm },
+  reviewUsername: { ...typography.labelMd, marginBottom: 2 },
+  reviewDate: { ...typography.caption },
+  reviewRating: { flexDirection: 'row' as const, gap: 2 },
+  reviewText: { ...typography.bodyMd, lineHeight: 22, marginBottom: spacing.md },
+  reviewImage: { width: '100%', height: 220, borderRadius: radii.lg, marginTop: spacing.sm },
+
+  // ── Show More ───────────────────────────────────
   showMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    gap: 8,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
   },
-  showMoreText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  showMoreText: { ...typography.labelMd },
 });

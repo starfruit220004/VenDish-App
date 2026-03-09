@@ -4,13 +4,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavorites } from './FavoritesContext';
 import { useReviews } from './ReviewsContext';
+import { getTheme, spacing, typography, radii, layout, palette } from '../../constants/theme';
 
 export default function FoodDetail({ route, navigation }: any) {
   const { food } = route.params;
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
   const { getFoodReviews, getAverageFoodRating, refreshReviews } = useReviews();
   const scheme = useColorScheme();
-  const isDarkMode = scheme === 'dark';
+  const isDark = scheme === 'dark';
+  const theme = getTheme(isDark);
   const isFav = isFavorite(food.id);
 
   const [showModal, setShowModal] = React.useState(false);
@@ -19,7 +21,6 @@ export default function FoodDetail({ route, navigation }: any) {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('FoodDetail focused, refreshing reviews...');
       refreshReviews();
     }, [refreshReviews])
   );
@@ -40,40 +41,47 @@ export default function FoodDetail({ route, navigation }: any) {
     setShowModal(true);
   };
 
-  const getStockStatus = (stock: number) => {
-    if (stock === 0) return { text: 'Out of Stock', color: '#F44336' };
-    if (stock < 10) return { text: 'Low Stock', color: '#FF9800' };
-    return { text: 'In Stock', color: '#4CAF50' };
+  const getStockStatus = (isAvailable: boolean, stock: number) => {
+    // 1. Ultimate source of truth: If explicitly set to unavailable, it's unavailable.
+    // Also, if stock is mathematically 0, force it to be unavailable.
+    if (!isAvailable || stock === 0) {
+      return { text: 'Unavailable', color: palette.error };
+    }
+    
+    // 2. Optional: Keep the low stock warning ONLY if it's currently available
+    if (stock > 0 && stock < 10) {
+      return { text: 'Limited Availability', color: palette.warning };
+    }
+    
+    // 3. Otherwise, it is good to go
+    return { text: 'Available', color: palette.success };
   };
 
-  const stockStatus = getStockStatus(food.stock);
+  // Update the call to pass both properties
+  const stockStatus = getStockStatus(food.isAvailable, food.stock);
 
   const renderStars = (rating: number) => {
     const roundedRating = Math.round(rating);
     return (
       <View style={styles.detailStarsContainer}>
         {[...Array(5)].map((_, i) => (
-          <Ionicons key={i} name={i < roundedRating ? 'star' : 'star-outline'} size={24} color="#FFC107" />
+          <Ionicons key={i} name={i < roundedRating ? 'star' : 'star-outline'} size={20} color={palette.gold} />
         ))}
-        <Text style={[styles.ratingText, { color: isDarkMode ? '#BDBDBD' : '#616161' }]}>
+        <Text style={[styles.ratingText, { color: theme.textMuted }]}>
           {rating.toFixed(1)} / 5.0 {foodReviews.length > 0 && `(${foodReviews.length} ${foodReviews.length === 1 ? 'review' : 'reviews'})`}
         </Text>
       </View>
     );
   };
 
-  const renderNoRating = () => {
-    return (
-      <View style={styles.detailStarsContainer}>
-        {[...Array(5)].map((_, i) => (
-          <Ionicons key={i} name="star-outline" size={24} color={isDarkMode ? '#424242' : '#E0E0E0'} />
-        ))}
-        <Text style={[styles.ratingText, { color: isDarkMode ? '#757575' : '#9E9E9E' }]}>
-          No ratings yet
-        </Text>
-      </View>
-    );
-  };
+  const renderNoRating = () => (
+    <View style={styles.detailStarsContainer}>
+      {[...Array(5)].map((_, i) => (
+        <Ionicons key={i} name="star-outline" size={20} color={theme.textDisabled} />
+      ))}
+      <Text style={[styles.ratingText, { color: theme.textDisabled }]}>No ratings yet</Text>
+    </View>
+  );
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -83,122 +91,98 @@ export default function FoodDetail({ route, navigation }: any) {
   return (
     <>
       <ScrollView
-        style={[styles.detailScroll, { backgroundColor: isDarkMode ? '#000' : '#FFEBEE' }]}
+        style={[styles.detailScroll, { backgroundColor: theme.background }]}
         contentContainerStyle={styles.detailContent}
+        showsVerticalScrollIndicator={false}
       >
+        {/* ── Hero Image ─────────────────────────────────────── */}
         <View style={styles.detailImageContainer}>
           <Image source={food.image} style={styles.detailImage} />
+
           <TouchableOpacity
-            style={styles.backButton}
+            style={[styles.backButton, { backgroundColor: 'rgba(0,0,0,0.35)' }]}
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <View style={styles.detailCategoryBadge}>
-            <Text style={styles.detailCategoryText}>{food.category}</Text>
+
+          <View style={[styles.detailCategoryBadge, { backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.92)' }]}>
+            <Text style={[styles.detailCategoryText, { color: theme.accent }]}>{food.category}</Text>
           </View>
+
           <View style={[styles.detailStockBadge, { backgroundColor: stockStatus.color }]}>
             <Text style={styles.detailStockText}>{stockStatus.text}</Text>
           </View>
         </View>
 
+        {/* ── Content ─────────────────────────────────────────── */}
         <View style={styles.detailInfo}>
-          <Text style={[styles.detailTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-            {food.name}
-          </Text>
-          {hasReviews ? renderStars(averageRating) : renderNoRating()}
-          <Text style={[styles.detailDesc, { color: isDarkMode ? '#BDBDBD' : '#424242' }]}>
-            {food.description}
-          </Text>
-
-          {/* Price and Stock Information */}
-          <View style={[styles.priceStockSection, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
-            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
-              Food Information
-            </Text>
-            
-            <View style={styles.priceStockGrid}>
-              <View style={styles.infoItem}>
-                <View style={styles.infoIconContainer}>
-                  <Ionicons name="pricetag-outline" size={20} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
-                </View>
-                <View style={styles.infoTextContainer}>
-                  <Text style={[styles.infoLabel, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
-                    Price
-                  </Text>
-                  <Text style={[styles.infoValue, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
-                    ₱{food.price}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.infoItem}>
-                <View style={styles.infoIconContainer}>
-                  <Ionicons name="cube-outline" size={20} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
-                </View>
-                <View style={styles.infoTextContainer}>
-                  <Text style={[styles.infoLabel, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
-                    Available Stock
-                  </Text>
-                  <Text style={[styles.infoValue, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
-                    {food.stock} servings
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.infoItem}>
-                <View style={styles.infoIconContainer}>
-                  <Ionicons name="stats-chart-outline" size={20} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
-                </View>
-                <View style={styles.infoTextContainer}>
-                  <Text style={[styles.infoLabel, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
-                    Status
-                  </Text>
-                  <Text style={[styles.infoValue, { color: stockStatus.color }]}>
-                    {stockStatus.text}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.infoItem}>
-                <View style={styles.infoIconContainer}>
-                  <Ionicons name="fast-food-outline" size={20} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
-                </View>
-                <View style={styles.infoTextContainer}>
-                  <Text style={[styles.infoLabel, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
-                    Category
-                  </Text>
-                  <Text style={[styles.infoValue, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
-                    {food.category}
-                  </Text>
-                </View>
-              </View>
+          {/* Title + Price Row */}
+          <View style={styles.titlePriceRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.detailTitle, { color: theme.textPrimary }]}>
+                {food.name}
+              </Text>
+              {hasReviews ? renderStars(averageRating) : renderNoRating()}
+            </View>
+            <View style={[styles.pricePill, { backgroundColor: theme.accentSoft }]}>
+              <Text style={[styles.pricePillText, { color: theme.accent }]}>₱{food.price}</Text>
             </View>
           </View>
 
+          <Text style={[styles.detailDesc, { color: theme.textSecondary }]}>
+            {food.description}
+          </Text>
+
+          {/* ── Info Bento Grid ──────────────────────────────── */}
+          <View style={[styles.priceStockSection, { backgroundColor: theme.surface }, theme.cardShadow]}>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+              Food Information
+            </Text>
+            <View style={styles.priceStockGrid}>
+              {[
+                { icon: 'pricetag-outline' as const, label: 'Price', value: `₱${food.price}`, valueColor: theme.textPrimary },
+                { icon: 'cube-outline' as const, label: 'Stock', value: `${food.stock ?? '—'} servings`, valueColor: theme.textPrimary },
+                { icon: 'pulse-outline' as const, label: 'Status', value: stockStatus.text, valueColor: stockStatus.color },
+                { icon: 'fast-food-outline' as const, label: 'Category', value: food.category, valueColor: theme.textPrimary },
+              ].map((item, idx) => (
+                <View key={idx} style={styles.infoItem}>
+                  <View style={[styles.infoIconContainer, { backgroundColor: theme.accentSoft }]}>
+                    <Ionicons name={item.icon} size={18} color={theme.accent} />
+                  </View>
+                  <View style={styles.infoTextContainer}>
+                    <Text style={[styles.infoLabel, { color: theme.textMuted }]}>{item.label}</Text>
+                    <Text style={[styles.infoValue, { color: item.valueColor }]}>{item.value}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* ── Favorite Button ──────────────────────────────── */}
           <TouchableOpacity
             style={[
               styles.favoriteButton,
-              isFav ? styles.favoriteButtonRemove : styles.favoriteButtonAdd
+              { backgroundColor: isFav ? theme.textMuted : theme.accent },
             ]}
             onPress={handleFavoriteToggle}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
-            <Ionicons name={isFav ? 'heart' : 'heart-outline'} size={24} color="#FFFFFF" />
+            <Ionicons name={isFav ? 'heart' : 'heart-outline'} size={22} color="#FFFFFF" />
             <Text style={styles.favoriteButtonText}>
               {isFav ? 'Remove from Favorites' : 'Add to Favorites'}
             </Text>
           </TouchableOpacity>
 
-          {/* Reviews Section */}
-          <View style={[styles.reviewsSection, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
+          {/* ── Reviews Section ──────────────────────────────── */}
+          <View style={[styles.reviewsSection, { backgroundColor: theme.surface }, theme.cardShadow]}>
             <View style={styles.reviewsHeader}>
-              <Text style={[styles.reviewsSectionTitle, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
+              <Text style={[styles.reviewsSectionTitle, { color: theme.textPrimary }]}>
                 Customer Reviews
               </Text>
               {foodReviews.length > 0 && (
-                <Text style={[styles.reviewsCount, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
+                <Text style={[styles.reviewsCount, { color: theme.textMuted }]}>
                   {foodReviews.length} {foodReviews.length === 1 ? 'review' : 'reviews'}
                 </Text>
               )}
@@ -206,38 +190,38 @@ export default function FoodDetail({ route, navigation }: any) {
 
             {foodReviews.length === 0 ? (
               <View style={styles.noReviewsContainer}>
-                <Ionicons name="chatbox-outline" size={48} color={isDarkMode ? '#424242' : '#E0E0E0'} />
-                <Text style={[styles.noReviewsText, { color: isDarkMode ? '#757575' : '#9E9E9E' }]}>
+                <Ionicons name="chatbox-outline" size={40} color={theme.textDisabled} />
+                <Text style={[styles.noReviewsText, { color: theme.textMuted }]}>
                   No reviews yet. Be the first to review!
                 </Text>
               </View>
             ) : (
               <>
                 {displayedReviews.map(review => (
-                  <View key={review.id} style={[styles.reviewCard, { borderColor: isDarkMode ? '#2C2C2E' : '#F0F0F0' }]}>
+                  <View key={review.id} style={[styles.reviewCard, { borderColor: theme.border }]}>
                     <View style={styles.reviewHeader}>
                       <View style={styles.reviewAuthor}>
-                        <View style={[styles.reviewAvatar, { backgroundColor: isDarkMode ? '#2C2C2E' : '#F0F0F0' }]}>
-                          <Text style={[styles.reviewAvatarText, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+                        <View style={[styles.reviewAvatar, { backgroundColor: theme.accentSoft }]}>
+                          <Text style={[styles.reviewAvatarText, { color: theme.accent }]}>
                             {review.username.charAt(0).toUpperCase()}
                           </Text>
                         </View>
                         <View>
-                          <Text style={[styles.reviewUsername, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
+                          <Text style={[styles.reviewUsername, { color: theme.textPrimary }]}>
                             {review.username}
                           </Text>
-                          <Text style={[styles.reviewDate, { color: isDarkMode ? '#757575' : '#9E9E9E' }]}>
+                          <Text style={[styles.reviewDate, { color: theme.textMuted }]}>
                             {formatDate(review.timestamp)}
                           </Text>
                         </View>
                       </View>
                       <View style={styles.reviewRating}>
                         {[...Array(5)].map((_, i) => (
-                          <Ionicons key={i} name={i < review.rating ? 'star' : 'star-outline'} size={14} color="#FFC107" />
+                          <Ionicons key={i} name={i < review.rating ? 'star' : 'star-outline'} size={13} color={palette.gold} />
                         ))}
                       </View>
                     </View>
-                    <Text style={[styles.reviewText, { color: isDarkMode ? '#BDBDBD' : '#616161' }]}>
+                    <Text style={[styles.reviewText, { color: theme.textSecondary }]}>
                       {review.review}
                     </Text>
                     {review.media && (
@@ -247,28 +231,18 @@ export default function FoodDetail({ route, navigation }: any) {
                 ))}
 
                 {foodReviews.length > 3 && !showAllReviews && (
-                  <TouchableOpacity
-                    style={styles.showMoreButton}
-                    onPress={() => setShowAllReviews(true)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.showMoreText, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
+                  <TouchableOpacity style={styles.showMoreButton} onPress={() => setShowAllReviews(true)} activeOpacity={0.8}>
+                    <Text style={[styles.showMoreText, { color: theme.accent }]}>
                       Show all {foodReviews.length} reviews
                     </Text>
-                    <Ionicons name="chevron-down" size={20} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
+                    <Ionicons name="chevron-down" size={18} color={theme.accent} />
                   </TouchableOpacity>
                 )}
 
                 {showAllReviews && foodReviews.length > 3 && (
-                  <TouchableOpacity
-                    style={styles.showMoreButton}
-                    onPress={() => setShowAllReviews(false)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.showMoreText, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-                      Show less
-                    </Text>
-                    <Ionicons name="chevron-up" size={20} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
+                  <TouchableOpacity style={styles.showMoreButton} onPress={() => setShowAllReviews(false)} activeOpacity={0.8}>
+                    <Text style={[styles.showMoreText, { color: theme.accent }]}>Show less</Text>
+                    <Ionicons name="chevron-up" size={18} color={theme.accent} />
                   </TouchableOpacity>
                 )}
               </>
@@ -277,36 +251,36 @@ export default function FoodDetail({ route, navigation }: any) {
         </View>
       </ScrollView>
 
-      <View style={[styles.buttonContainer, { backgroundColor: isDarkMode ? '#000' : '#FFEBEE' }]}>
+      {/* ── Sticky Review CTA ────────────────────────────────── */}
+      <View style={[styles.buttonContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
         <TouchableOpacity
-          style={styles.writeReviewButton}
+          style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
           onPress={() => navigation.navigate("WriteReview", { food })}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
-          <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+          <Ionicons name="create-outline" size={20} color="#FFFFFF" />
           <Text style={styles.writeReviewText}>Write a Review</Text>
         </TouchableOpacity>
       </View>
 
+      {/* ── Favorite Toggle Modal ────────────────────────────── */}
       <Modal visible={showModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalBox,
-            { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }
-          ]}>
-            <Ionicons
-              name={isFav ? "heart" : "heart-dislike"}
-              size={48}
-              color={isFav ? "#B71C1C" : "#757575"}
-              style={{ marginBottom: 16 }}
-            />
-            <Text style={[styles.modalText, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.modalOverlay }]}>
+          <View style={[styles.modalBox, { backgroundColor: theme.surface }, theme.cardShadowHeavy]}>
+            <View style={[styles.modalIconWrap, { backgroundColor: isFav ? theme.accentSoft : theme.surfaceElevated }]}>
+              <Ionicons
+                name={isFav ? "heart" : "heart-dislike"}
+                size={32}
+                color={isFav ? theme.accent : theme.textMuted}
+              />
+            </View>
+            <Text style={[styles.modalText, { color: theme.textPrimary }]}>
               {modalMessage}
             </Text>
             <TouchableOpacity
-              style={styles.modalButton}
+              style={[styles.modalButton, { backgroundColor: theme.accent }]}
               onPress={() => setShowModal(false)}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
               <Text style={styles.modalButtonText}>OK</Text>
             </TouchableOpacity>
@@ -319,52 +293,83 @@ export default function FoodDetail({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   detailScroll: { flex: 1 },
-  detailContent: { paddingBottom: 30 },
-  detailImageContainer: { position: 'relative', width: '100%', height: 350 },
+  detailContent: { paddingBottom: spacing['3xl'] },
+
+  // ── Hero ────────────────────────────────────────────────────
+  detailImageContainer: { position: 'relative', width: '100%', height: 320 },
   detailImage: { width: '100%', height: '100%' },
+  heroGradientTop: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: 80,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  heroGradientBottom: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 80,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
   backButton: {
     position: 'absolute',
-    top: 16,
-    left: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 20,
-    padding: 8,
+    top: spacing.lg,
+    left: spacing.lg,
+    borderRadius: radii.full,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 10,
   },
   detailCategoryBadge: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 8
+    top: spacing.lg,
+    right: spacing.lg,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  detailCategoryText: { fontSize: 12, fontWeight: 'bold', color: '#B71C1C' },
+  detailCategoryText: { ...typography.labelMd },
   detailStockBadge: {
     position: 'absolute',
-    bottom: 16,
-    right: 16,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6
+    bottom: spacing.lg,
+    right: spacing.lg,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
-  detailStockText: { fontSize: 12, fontWeight: 'bold', color: '#FFFFFF' },
-  detailInfo: { padding: 20 },
-  detailTitle: { fontSize: 32, fontWeight: 'bold', marginBottom: 12 },
-  detailStarsContainer: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
-  ratingText: { fontSize: 16, fontWeight: '600', marginLeft: 8 },
-  detailDesc: { fontSize: 16, lineHeight: 24, marginBottom: 24 },
+  detailStockText: { ...typography.labelMd, color: '#FFFFFF' },
+
+  // ── Content ─────────────────────────────────────────────────
+  detailInfo: { padding: spacing.xl },
+  titlePriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  detailTitle: { ...typography.displayMd, marginBottom: spacing.sm },
+  pricePill: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.full,
+    marginLeft: spacing.md,
+  },
+  pricePillText: { ...typography.headingLg },
+  detailStarsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    marginBottom: spacing.md,
+  },
+  ratingText: { ...typography.labelLg, marginLeft: spacing.sm },
+  detailDesc: { ...typography.bodyLg, marginBottom: spacing['2xl'] },
+
+  // ── Info Grid (Bento) ───────────────────────────────────────
   priceStockSection: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
+    marginBottom: spacing.xl,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
+  sectionTitle: { ...typography.headingMd, marginBottom: spacing.lg },
   priceStockGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -374,177 +379,142 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '48%',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   infoIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(183, 28, 28, 0.1)',
+    width: 36,
+    height: 36,
+    borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
-  infoTextContainer: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  infoTextContainer: { flex: 1 },
+  infoLabel: { ...typography.caption, marginBottom: spacing.xxs },
+  infoValue: { ...typography.headingSm },
+
+  // ── Favorite Button ─────────────────────────────────────────
   favoriteButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 10,
-    marginBottom: 24,
+    width: '100%',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.lg,
+    gap: spacing.sm,
+    marginBottom: spacing['2xl'],
   },
-  favoriteButtonAdd: { backgroundColor: '#B71C1C' },
-  favoriteButtonRemove: { backgroundColor: '#757575' },
-  favoriteButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  favoriteButtonText: { color: '#FFFFFF', flexShrink: 1, textAlign: 'center'},
+
+  // ── Reviews ─────────────────────────────────────────────────
   reviewsSection: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
+    marginBottom: spacing.xl,
   },
   reviewsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
-  reviewsSectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  reviewsCount: {
-    fontSize: 14,
-  },
+  reviewsSectionTitle: { ...typography.headingLg },
+  reviewsCount: { ...typography.bodyMd },
   noReviewsContainer: {
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: spacing['3xl'],
+    gap: spacing.md,
   },
-  noReviewsText: {
-    fontSize: 14,
-    marginTop: 12,
-  },
+  noReviewsText: { ...typography.bodyMd },
   reviewCard: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
   },
   reviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
-  reviewAuthor: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
+  reviewAuthor: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   reviewAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: radii.full,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
-  reviewAvatarText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  reviewUsername: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  reviewDate: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  reviewRating: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  reviewText: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
+  reviewAvatarText: { ...typography.headingSm },
+  reviewUsername: { ...typography.labelLg },
+  reviewDate: { ...typography.caption, marginTop: spacing.xxs },
+  reviewRating: { flexDirection: 'row', gap: spacing.xxs },
+  reviewText: { ...typography.bodyMd, marginBottom: spacing.sm },
   reviewImage: {
     width: '100%',
     height: 200,
-    borderRadius: 8,
-    marginTop: 8,
+    borderRadius: radii.md,
+    marginTop: spacing.sm,
   },
   showMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    gap: 8,
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
   },
-  showMoreText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  showMoreText: { ...typography.labelLg },
+
+  // ── Sticky Button ───────────────────────────────────────────
   buttonContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
   },
   writeReviewButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#B71C1C',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 10,
+    paddingVertical: spacing.lg,
+    borderRadius: radii.lg,
+    gap: spacing.sm,
   },
-  writeReviewText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold'
-  },
+  writeReviewText: { color: '#FFFFFF'},
+
+  // ── Modal ───────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   modalBox: {
-    width: '80%',
-    borderRadius: 16,
-    padding: 30,
+    width: '82%',
+    borderRadius: radii['2xl'],
+    padding: spacing['3xl'],
     alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+  },
+  modalIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
   modalText: {
-    fontSize: 16,
-    marginBottom: 24,
+    ...typography.headingSm,
+    marginBottom: spacing['2xl'],
     textAlign: 'center',
-    fontWeight: '600',
   },
   modalButton: {
-    backgroundColor: '#B71C1C',
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing['3xl'],
     minWidth: 100,
     alignItems: 'center',
   },
-  modalButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
+  modalButtonText: { color: '#FFFFFF', ...typography.labelLg },
 });

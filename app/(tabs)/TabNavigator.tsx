@@ -1,5 +1,5 @@
 import React from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import Promos from './Promos';
@@ -7,7 +7,7 @@ import FeedTab from './FeedTab';
 import FavoritesTab from './FavoritesTab';
 import LocationTab from './LocationTab';
 import ShopReviewsTab from './ShopReviewsTab';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { getTheme, layout, spacing, typography } from '../../constants/theme';
 
 type TabParamList = {
   Promos: undefined;
@@ -19,30 +19,56 @@ type TabParamList = {
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
+/** Pill-shaped active indicator behind the icon */
+function TabIcon({ name, color, focused }: { name: keyof typeof Ionicons.glyphMap; color: string; focused: boolean }) {
+  const scheme = useColorScheme();
+  const theme = getTheme(scheme === 'dark');
+
+  return (
+    <View
+      style={[
+        {
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 44,
+          height: 32,
+          borderRadius: 16,
+        },
+        focused && {
+          backgroundColor: theme.accentSoft,
+        },
+      ]}
+    >
+      <Ionicons name={name} size={22} color={color} />
+    </View>
+  );
+}
+
 export default function TabNavigator() {
   const scheme = useColorScheme();
-  const isDarkMode = scheme === 'dark';
+  const isDark = scheme === 'dark';
+  const theme = getTheme(isDark);
 
   return (
     <Tab.Navigator
       initialRouteName="Promos"
       screenOptions={{
-        tabBarActiveTintColor: isDarkMode ? '#FF5252' : '#B71C1C',
-        tabBarInactiveTintColor: isDarkMode ? '#BDBDBD' : '#757575',
+        tabBarActiveTintColor: theme.tabBarActive,
+        tabBarInactiveTintColor: theme.tabBarInactive,
         tabBarStyle: {
-          backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF',
+          backgroundColor: theme.tabBarBg,
           borderTopWidth: 1,
-          borderTopColor: isDarkMode ? '#2C2C2E' : '#E0E0E0',
-          height: 90,
-          paddingBottom: 8,
-          // paddingTop: 8,
-          elevation: 8,
-          shadowColor: '#000',
+          borderTopColor: theme.tabBarBorder,
+          height: layout.tabBarHeight,
+          paddingBottom: Platform.OS === 'ios' ? spacing.sm : spacing.md,
+          paddingTop: spacing.xs,
+          ...theme.cardShadow,
           shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 4 },
+        tabBarLabelStyle: {
+          ...typography.labelSm,
+          marginTop: spacing.xxs,
+        },
         headerShown: false,
       }}
     >
@@ -50,7 +76,7 @@ export default function TabNavigator() {
         name="Promos"
         component={Promos}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="pricetag" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="pricetag" color={color} focused={focused} />,
           tabBarLabel: 'Promos',
         }}
       />
@@ -59,7 +85,7 @@ export default function TabNavigator() {
         name="Feed"
         component={FeedTab}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="restaurant" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="restaurant" color={color} focused={focused} />,
           tabBarLabel: 'Food',
         }}
       />
@@ -68,7 +94,7 @@ export default function TabNavigator() {
         name="Favorites"
         component={FavoritesTab}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="heart" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="heart" color={color} focused={focused} />,
           tabBarLabel: 'Favorites',
         }}
       />
@@ -77,7 +103,7 @@ export default function TabNavigator() {
         name="Location"
         component={LocationTab}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="location" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="location" color={color} focused={focused} />,
           tabBarLabel: 'Location',
         }}
       />
@@ -86,7 +112,7 @@ export default function TabNavigator() {
         name="ShopReviews"
         component={ShopReviewsTab}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="star" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="star" color={color} focused={focused} />,
           tabBarLabel: 'Reviews',
         }}
       />
