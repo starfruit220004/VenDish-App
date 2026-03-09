@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "food",
-    "slug": "food",
+    "name": "VenDish App",
+    "slug": "vendish-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/Logo2.jpg",
     "scheme": "food",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -14,9 +14,9 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/Logo2.jpg",
+        "backgroundImage": "./assets/images/Logo2.jpg",
+        "monochromeImage": "./assets/images/Logo2.jpg"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -59,17 +59,18 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "531beae2-5e19-471b-8598-ec0e32ea490c"
-      }
-    },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/531beae2-5e19-471b-8598-ec0e32ea490c"
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3603b841-72b8-4dff-99ba-72bab743d592"
+      }
+    },
+    "owner": "erzhadqt"
   }
 }
