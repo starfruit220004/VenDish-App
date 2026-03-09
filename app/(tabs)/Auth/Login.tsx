@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuthContext, UserData } from '../../context/AuthContext'; 
 import api from '../../../api/api'; 
 
-// [UPDATED] Define types to allow passing params to 'Tabs'
 type DrawerParamList = {
   Tabs: { screen?: string } | undefined;
   Signup: undefined;
@@ -24,6 +23,7 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // <-- Added state for toggling password
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -33,7 +33,6 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      // 1. GET TOKEN
       const response = await api.post('/firstapp/token/', {
         username: username,
         password: password
@@ -41,14 +40,12 @@ export default function Login() {
 
       const { access, refresh } = response.data;
 
-      // 2. GET USER DETAILS
       const userResponse = await api.get('/firstapp/users/me/', {
         headers: { Authorization: `Bearer ${access}` }
       });
 
       const backendUser = userResponse.data;
 
-      // 3. MAP BACKEND DATA TO FRONTEND INTERFACE
       const userData: UserData = {
         username: backendUser.username,
         email: backendUser.email || "No Email", 
@@ -60,12 +57,7 @@ export default function Login() {
         phone: backendUser.phone || ''
       };
 
-      // 4. SAVE TO CONTEXT
       await login(userData, access, refresh);
-      
-      // 5. [UPDATED] REDIRECT TO PROMOS TAB
-      // Navigate to the 'Tabs' navigator, then to the 'Promos' screen inside it.
-      // If your Promos screen is named differently in TabNavigator.tsx, update 'Promos' below.
       navigation.navigate('Tabs', { screen: 'FeedTab' });
 
     } catch (error: any) {
@@ -76,7 +68,6 @@ export default function Login() {
     }
   };
 
-  // Styles helpers
   const inputStyle = [styles.input, { color: isDarkMode ? '#FFF' : '#424242' }];
   const containerStyle = [styles.inputContainer, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }];
   const iconColor = isDarkMode ? '#E0E0E0' : '#757575';
@@ -105,6 +96,7 @@ export default function Login() {
               />
             </View>
 
+            {/* Password Field with Eye Icon */}
             <View style={containerStyle}>
               <Ionicons name="lock-closed-outline" size={20} color={iconColor} style={styles.inputIcon} />
               <TextInput
@@ -113,8 +105,11 @@ export default function Login() {
                 placeholderTextColor="#9E9E9E"
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={!showPassword} // Toggle based on state
               />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={iconColor} />
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation.navigate('ForgotPassword')}>

@@ -11,6 +11,7 @@ import {
   Modal,
   FlatList,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer';
@@ -19,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- IMPORTS ---
 import api from '../../api/api'; 
+import { setLogoutHandler } from '../../api/api';
 import TabNavigator from './TabNavigator';
 import FAQScreen from './FAQ';
 import Profile from './Profile';
@@ -33,10 +35,10 @@ import AboutTab from '../(tabs)/AboutTab';
 import { AuthContext, UserData, Coupon } from '../context/AuthContext'; 
 
 const AUTH_KEY = '@user_authenticated';
-const USER_DATA_KEY = '@user_data';
-const COUPON_WALLET_KEY = '@user_coupons';
-const ACCESS_TOKEN_KEY = '@access_token';
-const REFRESH_TOKEN_KEY = '@refresh_token';
+const USER_DATA_KEY = 'user_data';
+const COUPON_WALLET_KEY = 'claimed_coupons';
+const ACCESS_TOKEN_KEY = 'access_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
 
 type DrawerParamList = {
   Tabs: undefined;
@@ -160,6 +162,7 @@ export default function MainDrawer() {
   const [userToken, setUserToken] = useState<string | null>(null);
   const [claimedCoupons, setClaimedCoupons] = useState<Coupon[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false); // ✅ Added Pull-to-refresh state
 
   const [couponModalVisible, setCouponModalVisible] = useState(false);
   const [posModalVisible, setPosModalVisible] = useState(false);
@@ -169,6 +172,26 @@ export default function MainDrawer() {
     checkAuthStatus();
   }, []);
 
+  // ✅ Auto-refresh when the wallet modal opens
+  useEffect(() => {
+    if (couponModalVisible && isLoggedIn) {
+      fetchMyCoupons(false); // Silently fetch fresh data when wallet opens
+    }
+  }, [couponModalVisible, isLoggedIn]);
+
+  // Register a lightweight logout handler so the API interceptor can
+  // reset React state when a refresh token dies. Tokens are already
+  // cleared from AsyncStorage by the interceptor itself.
+  useEffect(() => {
+    setLogoutHandler(() => {
+      setIsLoggedIn(false);
+      setUserData(null);
+      setUserToken(null);
+      setClaimedCoupons([]);
+    });
+    return () => setLogoutHandler(null);
+  }, []);
+
   // Helper to format date
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '';
@@ -176,22 +199,23 @@ export default function MainDrawer() {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  const fetchMyCoupons = async () => {
+  // ✅ Modified to support optional spinner toggling for RefreshControl
+  const fetchMyCoupons = async (showSpinner = false) => {
+    if (showSpinner) setIsRefreshing(true);
     try {
-        const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
-        if (!token) return;
+        // Token is automatically attached by the API interceptor
+        const response = await api.get('/firstapp/coupons/mine/');
 
-        // ✅ 1. Add Headers to Request
-        const response = await api.get('/firstapp/coupons/mine/', {
-            headers: { 'Authorization': `Bearer ${token}` }
+        // ✅ Map expiration + reflect POS usage via is_used flag + detect expired
+        const now = new Date();
+        const coupons = response.data.map((item: any) => {
+            const expiration = item.criteria_details?.valid_to || item.valid_to;
+            const isExpired = expiration ? new Date(expiration) < now : false;
+            let status = item.status || 'Active';
+            if (item.is_used) status = 'Redeemed';
+            else if (isExpired || status.toLowerCase() === 'expired') status = 'Expired';
+            return { ...item, status, expiration };
         });
-
-        // ✅ Map expiration from criteria_details
-        const coupons = response.data.map((item: any) => ({
-            ...item,
-            status: item.status || 'Active',
-            expiration: item.criteria_details?.valid_to || item.valid_to
-        }));
         
         setClaimedCoupons(coupons);
         await AsyncStorage.setItem(COUPON_WALLET_KEY, JSON.stringify(coupons));
@@ -203,6 +227,8 @@ export default function MainDrawer() {
             await logout(); 
             Alert.alert("Session Expired", "Please login again.");
         }
+    } finally {
+        if (showSpinner) setIsRefreshing(false);
     }
   };
 
@@ -218,7 +244,7 @@ export default function MainDrawer() {
         setUserToken(storedToken);
         await fetchMyCoupons();
       } else {
-        const storedCoupons = await AsyncStorage.getItem(COUPON_WALLET_KEY); 
+        const storedCoupons = await AsyncStorage.getItem(COUPON_WALLET_KEY);
         if (storedCoupons) {
             setClaimedCoupons(JSON.parse(storedCoupons));
         }
@@ -253,7 +279,7 @@ export default function MainDrawer() {
       await AsyncStorage.removeItem(USER_DATA_KEY);
       await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
       await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
-      await AsyncStorage.removeItem(COUPON_WALLET_KEY); // You can keep this if backend is fixed
+      await AsyncStorage.removeItem(COUPON_WALLET_KEY);
 
       setIsLoggedIn(false);
       setUserData(null);
@@ -303,24 +329,30 @@ export default function MainDrawer() {
     setPosModalVisible(true);
   };
 
-  const handlePosDone = async () => {
-    if (selectedPosCoupon) {
-        await markAsRedeemed(selectedPosCoupon.id);
-        setPosModalVisible(false);
-        setSelectedPosCoupon(null);
-        Alert.alert("Success", "Coupon marked as used.");
-    }
-  };
-
   const renderCouponItem = ({ item }: { item: Coupon }) => {
     const isRedeemed = item.status === 'Redeemed';
+    const isExpired = item.status === 'Expired';
+    const isDisabled = isRedeemed || isExpired;
+
+    const buttonLabel = isRedeemed ? 'USED' : isExpired ? 'EXPIRED' : 'USE NOW';
+    const buttonStyle = isRedeemed ? styles.redeemedBtn : isExpired ? styles.expiredBtn : undefined;
 
     return (
-      <View style={[styles.couponItem, { backgroundColor: isDarkMode ? '#2C2C2E' : '#FFF', opacity: isRedeemed ? 0.7 : 1 }]}>
+      <View style={[styles.couponItem, { backgroundColor: isDarkMode ? '#2C2C2E' : '#FFF', opacity: isDisabled ? 0.7 : 1 }]}>
+        {/* ✅ Dismiss button for expired coupons */}
+        {isExpired && (
+          <TouchableOpacity
+            style={styles.dismissBtn}
+            onPress={() => removeFromWallet(item.id)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close-circle" size={22} color="#9E9E9E" />
+          </TouchableOpacity>
+        )}
         <View style={styles.couponLeft}>
           <Text style={[styles.couponProduct, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>{item.product_name}</Text>
           <Text style={[styles.couponName, { color: isDarkMode ? '#BBB' : '#555' }]}>{item.name}</Text>
-          <Text style={styles.couponCode}>Rate: <Text style={{fontWeight:'bold'}}>{item.rate}</Text></Text>
+          <Text style={styles.couponCode}>Discount: <Text style={{fontWeight:'bold'}}>{item.rate === 'FREE' ? 'FREE ITEM' : `${item.rate} OFF`}</Text></Text>
           
           {/* ✅ DISPLAY EXPIRY DATE */}
           {item.expiration && (
@@ -330,14 +362,15 @@ export default function MainDrawer() {
           )}
 
           {isRedeemed && <Text style={{fontSize: 10, color: '#757575', marginTop: 4, fontWeight:'bold'}}>STATUS: REDEEMED</Text>}
+          {isExpired && <Text style={{fontSize: 10, color: '#FF6F00', marginTop: 4, fontWeight:'bold'}}>STATUS: EXPIRED</Text>}
         </View>
         <View style={styles.couponRight}>
            <TouchableOpacity 
-              style={[styles.useBtn, isRedeemed && styles.redeemedBtn]} 
-              onPress={() => !isRedeemed && openPosModal(item)}
-              disabled={isRedeemed} 
+              style={[styles.useBtn, buttonStyle]} 
+              onPress={() => !isDisabled && openPosModal(item)}
+              disabled={isDisabled} 
            >
-              <Text style={styles.useBtnText}>{isRedeemed ? 'USED' : 'USE NOW'}</Text>
+              <Text style={styles.useBtnText}>{buttonLabel}</Text>
            </TouchableOpacity>
         </View>
       </View>
@@ -428,6 +461,14 @@ export default function MainDrawer() {
                         keyExtractor={(item) => item.id.toString()}
                         renderItem={renderCouponItem}
                         contentContainerStyle={{padding: 16}}
+                        // ✅ Added pull-to-refresh logic here
+                        refreshControl={
+                            <RefreshControl 
+                                refreshing={isRefreshing} 
+                                onRefresh={() => fetchMyCoupons(true)} 
+                                colors={['#B71C1C']} 
+                            />
+                        }
                     />
                 )}
             </View>
@@ -447,7 +488,7 @@ export default function MainDrawer() {
 
                 <View style={styles.posCodeContainer}>
                     <Text style={styles.posProductText}>{selectedPosCoupon?.product_name}</Text>
-                    <Text style={styles.posDiscountText}>{selectedPosCoupon?.rate} OFF</Text>
+                    <Text style={styles.posDiscountText}>{selectedPosCoupon?.rate === 'FREE' ? 'FREE ITEM' : `${selectedPosCoupon?.rate} OFF`}</Text>
                     
                     <View style={styles.dashedLine} />
                     
@@ -523,7 +564,9 @@ const styles = StyleSheet.create({
   couponCode: { fontSize: 12, color: '#777' },
   couponRight: { alignItems: 'center', justifyContent: 'center', marginLeft: 10 },
   useBtn: { backgroundColor: '#B71C1C', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
-  redeemedBtn: { backgroundColor: '#9E9E9E' }, 
+  redeemedBtn: { backgroundColor: '#9E9E9E' },
+  expiredBtn: { backgroundColor: '#757575' },
+  dismissBtn: { position: 'absolute' as const, top: 8, right: 8, zIndex: 10 }, 
   useBtnText: { color: '#FFF', fontSize: 12, fontWeight: 'bold' },
 
   posModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' },

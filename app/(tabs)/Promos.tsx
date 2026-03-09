@@ -14,13 +14,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
-import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import api from '../../api/api'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // IMPORT CONTEXT
 import { AuthContext, Coupon } from '../context/AuthContext'; 
-
-const ACCESS_TOKEN_KEY = '@access_token'; 
 
 type DrawerParamList = {
   Tabs: undefined;
@@ -37,6 +35,42 @@ export default function Promos() {
   const navigation = useNavigation<PromoNavigationProp>();
   
   const { isLoggedIn, userData, addToWallet, claimedCoupons, logout } = useContext(AuthContext); 
+
+  // Per-user dismissed expired promos (persisted in AsyncStorage)
+  const [dismissedPromoIds, setDismissedPromoIds] = useState<number[]>([]);
+
+  const getDismissedKey = () => {
+    if (!userData?.username) return null;
+    return `dismissed_promos_${userData.username}`;
+  };
+
+  // Load dismissed IDs from AsyncStorage when user changes
+  useEffect(() => {
+    const loadDismissed = async () => {
+      const key = getDismissedKey();
+      if (!key) {
+        setDismissedPromoIds([]);
+        return;
+      }
+      try {
+        const stored = await AsyncStorage.getItem(key);
+        setDismissedPromoIds(stored ? JSON.parse(stored) : []);
+      } catch {
+        setDismissedPromoIds([]);
+      }
+    };
+    loadDismissed();
+  }, [userData?.username]);
+
+  const dismissExpiredPromo = async (id: number) => {
+    const updated = [...dismissedPromoIds, id];
+    setDismissedPromoIds(updated);
+    // Only hide from Promos UI — coupon wallet has its own X button
+    const key = getDismissedKey();
+    if (key) {
+      await AsyncStorage.setItem(key, JSON.stringify(updated));
+    }
+  };
 
   const [promos, setPromos] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,23 +116,8 @@ export default function Promos() {
   const handleClaimPromo = async (promo: Coupon) => {
     if (isLoggedIn) {
       try {
-        const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
-
-        if (!token) {
-            Alert.alert("Error", "Authentication token not found. Please login again.");
-            logout();
-            return;
-        }
-
-        await api.post(
-            `firstapp/coupons/${promo.id}/claim/`, 
-            {}, 
-            {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            }
-        );
+        // Token is automatically attached by the API interceptor
+        await api.post(`/firstapp/coupons/${promo.id}/claim/`);
 
         // Update local state
         setPromos(prevPromos => 
@@ -166,8 +185,9 @@ export default function Promos() {
     return date.toLocaleDateString('en-US', options);
   };
 
-  const formatCurrency = (amount: string) => {
-    return `₱${parseFloat(amount).toFixed(0)}`; 
+  const formatRate = (rate: string) => {
+    if (rate === 'FREE') return 'FREE ITEM';
+    return `${rate} OFF`;
   };
 
   if (loading) {
@@ -202,7 +222,7 @@ export default function Promos() {
             <Text style={{ color: isDarkMode ? '#FFF' : '#000' }}>No active promos at the moment.</Text>
         </View>
       ) : (
-        promos.map(promo => {
+        promos.filter(promo => !dismissedPromoIds.includes(promo.id)).map(promo => {
           const isLocallyClaimed = claimedCoupons.some(c => c.id === promo.id);
           const status = promo.status ? promo.status.toLowerCase() : 'active';
           
@@ -239,12 +259,23 @@ export default function Promos() {
                 isExpired && { opacity: 0.7 } // [UPDATED] Fade out expired cards
               ]}
             >
+              {/* ✅ Dismiss button for expired promos */}
+              {isExpired && (
+                <TouchableOpacity
+                  style={styles.promoDismissBtn}
+                  onPress={() => dismissExpiredPromo(promo.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close-circle" size={24} color="#9E9E9E" />
+                </TouchableOpacity>
+              )}
+
               <View style={[
                   styles.discountBadge,
                   isExpired && { backgroundColor: '#757575' } // [UPDATED] Grey badge if expired
                 ]}>
                 <Text style={styles.discountText}>
-                    {isExpired ? 'EXPIRED' : `${formatCurrency(promo.rate)} OFF`}
+                    {isExpired ? 'EXPIRED' : formatRate(promo.rate)}
                 </Text>
               </View>
               
@@ -421,6 +452,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   discountText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+  promoDismissBtn: { position: 'absolute' as const, top: 8, left: 8, zIndex: 20 },
   promoInfo: { padding: 16, paddingTop: 8 },
   promoTitle: { 
     fontSize: 24, 

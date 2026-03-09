@@ -25,7 +25,10 @@ export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // <-- Password visibility toggle
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // <-- Confirm Password visibility toggle
 
   const handleSignup = async () => {
     Keyboard.dismiss();
@@ -42,9 +45,6 @@ export default function Signup() {
 
     setIsLoading(true);
     try {
-      // 1. REGISTER THE USER
-      // Make sure this URL matches your router path in urls.py. 
-      // Typically it is 'users' (plural) if using DefaultRouter.
       await api.post('/firstapp/users/register/', { 
         username: username,
         email: email,
@@ -54,7 +54,6 @@ export default function Signup() {
         last_name: lastName    
       });
 
-      // 2. SUCCESS HANDLING
       Alert.alert(
         "Success", 
         "Account created successfully! Please log in.",
@@ -62,7 +61,6 @@ export default function Signup() {
             { 
                 text: "OK", 
                 onPress: () => {
-                    // 3. CLEAR FIELDS
                     setFirstName('');
                     setMiddleName('');
                     setLastName('');
@@ -70,8 +68,6 @@ export default function Signup() {
                     setEmail('');
                     setPassword('');
                     setConfirmPassword('');
-
-                    // 4. REDIRECT TO LOGIN
                     navigation.navigate('Login');
                 } 
             }
@@ -84,10 +80,8 @@ export default function Signup() {
       let msg = 'Signup failed. Please check your internet connection.';
       if (error.response?.data) {
           const data = error.response.data;
-          // Handle Django error format
           if (typeof data === 'object') {
              const key = Object.keys(data)[0];
-             // Extract the error message string
              const errorVal = Array.isArray(data[key]) ? data[key][0] : data[key];
              msg = `${key.toUpperCase()}: ${errorVal}`;
           } else {
@@ -100,7 +94,6 @@ export default function Signup() {
     }
   };
 
-  // Helper styles for dynamic theming
   const inputStyle = [styles.input, { color: isDarkMode ? '#FFF' : '#424242' }];
   const containerStyle = [styles.inputContainer, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFF' }];
   const iconColor = isDarkMode ? '#E0E0E0' : '#757575';
@@ -114,7 +107,6 @@ export default function Signup() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={[styles.container, { backgroundColor: isDarkMode ? '#000' : '#FFEBEE' }]}>
             <View style={styles.logoContainer}>
-              {/* Ensure your image path is correct */}
               <Image
                 source={require('../../../assets/images/Logo2.jpg')}
                 style={styles.logoImage}
@@ -125,71 +117,32 @@ export default function Signup() {
             </View>
 
             <View style={styles.formContainer}>
-              {/* First Name */}
               <View style={containerStyle}>
                 <Ionicons name="person-outline" size={20} color={iconColor} style={styles.inputIcon} />
-                <TextInput
-                  style={inputStyle}
-                  placeholder="First Name"
-                  placeholderTextColor="#9E9E9E"
-                  value={firstName}
-                  onChangeText={setFirstName}
-                  autoCapitalize="words"
-                />
+                <TextInput style={inputStyle} placeholder="First Name" placeholderTextColor="#9E9E9E" value={firstName} onChangeText={setFirstName} autoCapitalize="words" />
               </View>
 
               <View style={containerStyle}>
                 <Ionicons name="person-outline" size={20} color={iconColor} style={styles.inputIcon} />
-                <TextInput
-                  style={inputStyle}
-                  placeholder="Middle Name (Optional)"
-                  placeholderTextColor="#999"
-                  value={middleName}
-                  onChangeText={setMiddleName}
-                />
+                <TextInput style={inputStyle} placeholder="Middle Name (Optional)" placeholderTextColor="#999" value={middleName} onChangeText={setMiddleName} />
               </View>
 
-              {/* Last Name */}
               <View style={containerStyle}>
                 <Ionicons name="person-outline" size={20} color={iconColor} style={styles.inputIcon} />
-                <TextInput
-                  style={inputStyle}
-                  placeholder="Last Name"
-                  placeholderTextColor="#9E9E9E"
-                  value={lastName}
-                  onChangeText={setLastName}
-                  autoCapitalize="words"
-                />
+                <TextInput style={inputStyle} placeholder="Last Name" placeholderTextColor="#9E9E9E" value={lastName} onChangeText={setLastName} autoCapitalize="words" />
               </View>
 
-              {/* Username */}
               <View style={containerStyle}>
                 <Ionicons name="at-outline" size={20} color={iconColor} style={styles.inputIcon} />
-                <TextInput
-                  style={inputStyle}
-                  placeholder="Username"
-                  placeholderTextColor="#9E9E9E"
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                />
+                <TextInput style={inputStyle} placeholder="Username" placeholderTextColor="#9E9E9E" value={username} onChangeText={setUsername} autoCapitalize="none" />
               </View>
 
-              {/* Email */}
               <View style={containerStyle}>
                 <Ionicons name="mail-outline" size={20} color={iconColor} style={styles.inputIcon} />
-                <TextInput
-                  style={inputStyle}
-                  placeholder="Email"
-                  placeholderTextColor="#9E9E9E"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
+                <TextInput style={inputStyle} placeholder="Email" placeholderTextColor="#9E9E9E" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
               </View>
 
-              {/* Password */}
+              {/* Password Field with Eye Icon */}
               <View style={containerStyle}>
                 <Ionicons name="lock-closed-outline" size={20} color={iconColor} style={styles.inputIcon} />
                 <TextInput
@@ -198,11 +151,14 @@ export default function Signup() {
                   placeholderTextColor="#9E9E9E"
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                 />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+                  <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={iconColor} />
+                </TouchableOpacity>
               </View>
 
-              {/* Confirm Password */}
+              {/* Confirm Password Field with Eye Icon */}
               <View style={containerStyle}>
                 <Ionicons name="lock-closed-outline" size={20} color={iconColor} style={styles.inputIcon} />
                 <TextInput
@@ -211,8 +167,11 @@ export default function Signup() {
                   placeholderTextColor="#9E9E9E"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  secureTextEntry
+                  secureTextEntry={!showConfirmPassword}
                 />
+                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: 4 }}>
+                  <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={20} color={iconColor} />
+                </TouchableOpacity>
               </View>
 
               <TouchableOpacity
