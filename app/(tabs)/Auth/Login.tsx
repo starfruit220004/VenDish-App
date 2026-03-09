@@ -1,10 +1,11 @@
-import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, useColorScheme, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, useColorScheme, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthContext, UserData } from '../../context/AuthContext'; 
+import { useAuth, UserData } from '../../context/AuthContext'; 
 import api from '../../../api/api'; 
+import FeedbackModal, { FeedbackAction, FeedbackVariant } from '../FeedbackModal';
 
 type DrawerParamList = {
   Tabs: { screen?: string } | undefined;
@@ -16,7 +17,7 @@ type LoginNavigationProp = DrawerNavigationProp<DrawerParamList, 'Tabs'>;
 
 export default function Login() {
   const navigation = useNavigation<LoginNavigationProp>();
-  const { login } = useContext(AuthContext); 
+  const { login } = useAuth(); 
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
 
@@ -24,10 +25,35 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false); // <-- Added state for toggling password
+  const [feedbackModal, setFeedbackModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    variant: FeedbackVariant;
+    actions?: FeedbackAction[];
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    variant: 'info',
+  });
+
+  const showFeedback = (
+    title: string,
+    message: string,
+    variant: FeedbackVariant = 'info',
+    actions?: FeedbackAction[]
+  ) => {
+    setFeedbackModal({ visible: true, title, message, variant, actions });
+  };
+
+  const closeFeedback = () => {
+    setFeedbackModal(prev => ({ ...prev, visible: false }));
+  };
 
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert('Error', 'Please enter both username and password.');
+      showFeedback('Error', 'Please enter both username and password.', 'error');
       return;
     }
 
@@ -35,7 +61,8 @@ export default function Login() {
     try {
       const response = await api.post('/firstapp/token/', {
         username: username,
-        password: password
+        password: password,
+        platform: 'app'
       });
 
       const { access, refresh } = response.data;
@@ -62,7 +89,7 @@ export default function Login() {
 
     } catch (error: any) {
       console.error('Login Error:', error);
-      Alert.alert('Login Failed', 'Invalid username or password.');
+      showFeedback('Login Failed', 'Invalid username or password.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -137,6 +164,15 @@ export default function Login() {
           </View>
 
         </View>
+
+        <FeedbackModal
+          visible={feedbackModal.visible}
+          title={feedbackModal.title}
+          message={feedbackModal.message}
+          variant={feedbackModal.variant}
+          actions={feedbackModal.actions}
+          onClose={closeFeedback}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );

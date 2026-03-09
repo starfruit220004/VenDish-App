@@ -5,7 +5,6 @@ import {
   TextInput, 
   TouchableOpacity, 
   StyleSheet, 
-  Alert, 
   useColorScheme, 
   ActivityIndicator 
 } from 'react-native';
@@ -13,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../../api/api'; // Ensure this points to your configured Axios instance
+import FeedbackModal, { FeedbackAction, FeedbackVariant } from '../FeedbackModal';
 
 type DrawerParamList = {
   Login: undefined;
@@ -33,6 +33,31 @@ export default function ForgotPassword() {
   const [resetToken, setResetToken] = useState(''); // Token received from backend
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [feedbackModal, setFeedbackModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    variant: FeedbackVariant;
+    actions?: FeedbackAction[];
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    variant: 'info',
+  });
+
+  const showFeedback = (
+    title: string,
+    message: string,
+    variant: FeedbackVariant = 'info',
+    actions?: FeedbackAction[]
+  ) => {
+    setFeedbackModal({ visible: true, title, message, variant, actions });
+  };
+
+  const closeFeedback = () => {
+    setFeedbackModal(prev => ({ ...prev, visible: false }));
+  };
 
   // Styles
   const textColor = isDarkMode ? '#FFF' : '#424242';
@@ -44,7 +69,10 @@ export default function ForgotPassword() {
 
   // Step 1: Request OTP
   const handleRequestOTP = async () => {
-    if (!email) return Alert.alert('Error', 'Please enter your email');
+    if (!email) {
+      showFeedback('Error', 'Please enter your email', 'error');
+      return;
+    }
     
     setLoading(true);
     try {
@@ -52,14 +80,14 @@ export default function ForgotPassword() {
       
       // FOR DEV: Since your backend sends the OTP in the response, show it here
       if (response.data.otp) {
-        Alert.alert('Development Mode', `Your OTP is: ${response.data.otp}`);
+        showFeedback('Development Mode', `Your OTP is: ${response.data.otp}`, 'info');
       } else {
-        Alert.alert('Success', 'OTP code sent to your email!');
+        showFeedback('Success', 'OTP code sent to your email!', 'success');
       }
       setStep(2);
     } catch (error: any) {
       const msg = error.response?.data?.details || error.response?.data?.label || "Failed to send OTP";
-      Alert.alert('Error', msg);
+      showFeedback('Error', msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -67,7 +95,10 @@ export default function ForgotPassword() {
 
   // Step 2: Verify OTP
   const handleVerifyOTP = async () => {
-    if (!otp) return Alert.alert('Error', 'Please enter the 6-digit code');
+    if (!otp) {
+      showFeedback('Error', 'Please enter the 6-digit code', 'error');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -79,14 +110,14 @@ export default function ForgotPassword() {
       // Backend returns a 'token' required for the next step
       if (response.data.token) {
         setResetToken(response.data.token);
-        Alert.alert('Verified', 'Code accepted. Please set your new password.');
+        showFeedback('Verified', 'Code accepted. Please set your new password.', 'success');
         setStep(3);
       } else {
-        Alert.alert('Error', 'Verification failed. No token received.');
+        showFeedback('Error', 'Verification failed. No token received.', 'error');
       }
     } catch (error: any) {
       const msg = error.response?.data?.details || error.response?.data?.label || "Invalid Code";
-      Alert.alert('Error', msg);
+      showFeedback('Error', msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -94,8 +125,14 @@ export default function ForgotPassword() {
 
   // Step 3: Change Password
   const handleChangePassword = async () => {
-    if (!newPassword || !confirmPassword) return Alert.alert('Error', 'Please fill all fields');
-    if (newPassword !== confirmPassword) return Alert.alert('Error', 'Passwords do not match');
+    if (!newPassword || !confirmPassword) {
+      showFeedback('Error', 'Please fill all fields', 'error');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showFeedback('Error', 'Passwords do not match', 'error');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -105,12 +142,15 @@ export default function ForgotPassword() {
         password: newPassword
       });
 
-      Alert.alert('Success!', 'Your password has been reset. Please login.', [
-        { text: 'Login Now', onPress: () => navigation.navigate('Login') }
-      ]);
+      showFeedback(
+        'Success!',
+        'Your password has been reset. Please login.',
+        'success',
+        [{ label: 'Login Now', onPress: () => navigation.navigate('Login') }]
+      );
     } catch (error: any) {
       const msg = error.response?.data?.details || error.response?.data?.label || "Failed to reset password";
-      Alert.alert('Error', msg);
+      showFeedback('Error', msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -217,6 +257,15 @@ export default function ForgotPassword() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <FeedbackModal
+        visible={feedbackModal.visible}
+        title={feedbackModal.title}
+        message={feedbackModal.message}
+        variant={feedbackModal.variant}
+        actions={feedbackModal.actions}
+        onClose={closeFeedback}
+      />
     </View>
   );
 }

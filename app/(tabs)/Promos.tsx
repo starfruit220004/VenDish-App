@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -9,7 +9,6 @@ import {
   Modal,
   ActivityIndicator,
   RefreshControl,
-  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -18,7 +17,8 @@ import api from '../../api/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // IMPORT CONTEXT
-import { AuthContext, Coupon } from '../context/AuthContext'; 
+import { useAuth, Coupon } from '../context/AuthContext'; 
+import FeedbackModal, { FeedbackAction, FeedbackVariant } from './FeedbackModal';
 
 type DrawerParamList = {
   Tabs: undefined;
@@ -34,7 +34,7 @@ export default function Promos() {
   const isDarkMode = scheme === 'dark';
   const navigation = useNavigation<PromoNavigationProp>();
   
-  const { isLoggedIn, userData, addToWallet, claimedCoupons, logout } = useContext(AuthContext); 
+  const { isLoggedIn, userData, addToWallet, claimedCoupons, logout } = useAuth(); 
 
   // Per-user dismissed expired promos (persisted in AsyncStorage)
   const [dismissedPromoIds, setDismissedPromoIds] = useState<number[]>([]);
@@ -80,6 +80,31 @@ export default function Promos() {
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [claimModalVisible, setClaimModalVisible] = useState(false);
   const [selectedPromo, setSelectedPromo] = useState<Coupon | null>(null);
+  const [feedbackModal, setFeedbackModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    variant: FeedbackVariant;
+    actions?: FeedbackAction[];
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    variant: 'info',
+  });
+
+  const showFeedback = (
+    title: string,
+    message: string,
+    variant: FeedbackVariant = 'info',
+    actions?: FeedbackAction[]
+  ) => {
+    setFeedbackModal({ visible: true, title, message, variant, actions });
+  };
+
+  const closeFeedback = () => {
+    setFeedbackModal(prev => ({ ...prev, visible: false }));
+  };
 
   const fetchCoupons = async () => {
     try {
@@ -138,13 +163,13 @@ export default function Promos() {
         console.error("Claim error:", error);
         
         if (error.response && error.response.status === 401) {
-            Alert.alert("Session Expired", "Please login again to claim this reward.");
             logout(); 
+            showFeedback('Session Expired', 'Please login again to claim this reward.', 'warning');
             return;
         }
 
         const errorMessage = error.response?.data?.error || "Unable to claim coupon. Please try again.";
-        Alert.alert("Error", errorMessage);
+        showFeedback('Error', errorMessage, 'error');
       }
     } else {
       setSelectedPromo(promo);
@@ -417,6 +442,15 @@ export default function Promos() {
           </View>
         </View>
       </Modal>
+
+      <FeedbackModal
+        visible={feedbackModal.visible}
+        title={feedbackModal.title}
+        message={feedbackModal.message}
+        variant={feedbackModal.variant}
+        actions={feedbackModal.actions}
+        onClose={closeFeedback}
+      />
     </ScrollView>
   );
 }

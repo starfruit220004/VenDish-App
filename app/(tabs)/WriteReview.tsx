@@ -1,10 +1,11 @@
-import React, { useState, useContext, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, useColorScheme, Modal, Alert } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, useColorScheme } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useReviews } from './ReviewsContext';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
+import FeedbackModal, { FeedbackAction, FeedbackVariant } from './FeedbackModal';
 
 type Food = {
   id: number;
@@ -25,30 +26,53 @@ export default function WriteReview({ route, navigation }: Props) {
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
   const { addFoodReview, hasReviewedFood } = useReviews();
-  const { isLoggedIn, userData } = useContext(AuthContext);
+  const { isLoggedIn, userData } = useAuth();
 
   const [review, setReview] = useState("");
   const [rating, setRating] = useState(0);
   const [media, setMedia] = useState<string | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorModalVisible, setErrorModalVisible] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [feedbackModal, setFeedbackModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    variant: FeedbackVariant;
+    actions?: FeedbackAction[];
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    variant: 'info',
+  });
+
+  const showFeedback = (
+    title: string,
+    message: string,
+    variant: FeedbackVariant = 'info',
+    actions?: FeedbackAction[]
+  ) => {
+    setFeedbackModal({ visible: true, title, message, variant, actions });
+  };
+
+  const closeFeedback = () => {
+    setFeedbackModal(prev => ({ ...prev, visible: false }));
+  };
 
   useEffect(() => {
 
-    if (isSubmitting || showSuccessModal) return;
+    if (isSubmitting || feedbackModal.visible) return;
 
     if (isLoggedIn && userData) {
       if (hasReviewedFood(food.id, userData.username)) {
-        Alert.alert(
-          "Already Reviewed", 
-          "You have already shared your thoughts on this dish. Thank you!", 
-          [{ text: "OK", onPress: () => navigation.goBack() }]
+        showFeedback(
+          "Already Reviewed",
+          "You have already shared your thoughts on this dish. Thank you!",
+          'info',
+          [{ label: 'OK', onPress: () => navigation.goBack() }]
         );
       }
     }
-  }, [isLoggedIn, userData, food.id, hasReviewedFood, isSubmitting, showSuccessModal]);
+  }, [isLoggedIn, userData, food.id, hasReviewedFood, isSubmitting, feedbackModal.visible]);
 
   const pickMedia = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -64,26 +88,22 @@ export default function WriteReview({ route, navigation }: Props) {
 
   const handleSubmit = async () => {
     if (!isLoggedIn || !userData) {
-      setErrorMessage('You must be logged in to submit a review');
-      setErrorModalVisible(true);
+      showFeedback('Error', 'You must be logged in to submit a review', 'error');
       return;
     }
 
     if (rating === 0) {
-      setErrorMessage('Please select a rating!');
-      setErrorModalVisible(true);
+      showFeedback('Error', 'Please select a rating!', 'error');
       return;
     }
     
     if (review.trim() === "") {
-      setErrorMessage('Please write a review!');
-      setErrorModalVisible(true);
+      showFeedback('Error', 'Please write a review!', 'error');
       return;
     }
 
     if (hasReviewedFood(food.id, userData.username)) {
-      setErrorMessage('You have already reviewed this food item.');
-      setErrorModalVisible(true);
+      showFeedback('Error', 'You have already reviewed this food item.', 'error');
       return;
     }
 
@@ -97,10 +117,10 @@ export default function WriteReview({ route, navigation }: Props) {
         media: media || undefined,
       });
 
-      setShowSuccessModal(true);
+      showFeedback('Review Submitted!', 'Thank you for sharing your experience', 'success');
       
       setTimeout(() => {
-        setShowSuccessModal(false);
+        closeFeedback();
         setReview("");
         setRating(0);
         setMedia(null);
@@ -108,20 +128,21 @@ export default function WriteReview({ route, navigation }: Props) {
       }, 2000);
     } catch (error: any) {
       console.error("Review Error:", error);
+      console.error("Review Error Status:", error.response?.status);
+      console.error("Review Error Data:", JSON.stringify(error.response?.data));
       
-      // ✅ FIX: Extract the specific error message from the backend response
       let msg = 'Failed to submit review. Please try again.';
       if (error.response?.data) {
-          // If it's an object (like {"product": ["Invalid pk"]}), stringify it
           if (typeof error.response.data === 'object') {
-             msg = JSON.stringify(error.response.data); 
+             msg = Object.entries(error.response.data)
+               .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+               .join('\n');
           } else {
-             msg = error.response.data;
+             msg = String(error.response.data);
           }
       }
       
-      setErrorMessage(msg);
-      setErrorModalVisible(true);
+      showFeedback('Error', msg, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -271,48 +292,14 @@ export default function WriteReview({ route, navigation }: Props) {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Success Modal */}
-      <Modal visible={showSuccessModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalBox,
-            { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }
-          ]}>
-            <Ionicons name="checkmark-circle" size={64} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
-            <Text style={[styles.modalTitle, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
-              Review Submitted!
-            </Text>
-            <Text style={[styles.modalText, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
-              Thank you for sharing your experience
-            </Text>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Error Modal */}
-      <Modal visible={errorModalVisible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalBox,
-            { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }
-          ]}>
-            <Ionicons name="alert-circle" size={64} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
-            <Text style={[styles.modalTitle, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
-              Error
-            </Text>
-            <Text style={[styles.modalText, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
-              {errorMessage}
-            </Text>
-            <TouchableOpacity 
-              style={[styles.modalButton, { backgroundColor: '#B71C1C' }]}
-              onPress={() => setErrorModalVisible(false)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.modalButtonText}>OK</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <FeedbackModal
+        visible={feedbackModal.visible}
+        title={feedbackModal.title}
+        message={feedbackModal.message}
+        variant={feedbackModal.variant}
+        actions={feedbackModal.actions}
+        onClose={closeFeedback}
+      />
     </View>
   );
 }
@@ -471,45 +458,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalBox: {
-    width: '80%',
-    borderRadius: 20,
-    padding: 40,
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  modalText: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  modalButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 40,
-    borderRadius: 12,
-    minWidth: 120,
-    marginTop: 16,
-  },
-  modalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
   },
 });

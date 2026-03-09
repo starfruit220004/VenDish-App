@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, useColorScheme, KeyboardAvoidingView, Platform, ScrollView, TouchableWithoutFeedback, Keyboard, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, useColorScheme, KeyboardAvoidingView, Platform, ScrollView, TouchableWithoutFeedback, Keyboard, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../../api/api'; 
+import FeedbackModal, { FeedbackAction, FeedbackVariant } from '../FeedbackModal';
 
 type DrawerParamList = {
   Tabs: undefined;
@@ -29,17 +30,42 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false); // <-- Password visibility toggle
   const [showConfirmPassword, setShowConfirmPassword] = useState(false); // <-- Confirm Password visibility toggle
+  const [feedbackModal, setFeedbackModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    variant: FeedbackVariant;
+    actions?: FeedbackAction[];
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    variant: 'info',
+  });
+
+  const showFeedback = (
+    title: string,
+    message: string,
+    variant: FeedbackVariant = 'info',
+    actions?: FeedbackAction[]
+  ) => {
+    setFeedbackModal({ visible: true, title, message, variant, actions });
+  };
+
+  const closeFeedback = () => {
+    setFeedbackModal(prev => ({ ...prev, visible: false }));
+  };
 
   const handleSignup = async () => {
     Keyboard.dismiss();
 
     if (!firstName || !lastName || !username || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      showFeedback('Error', 'Please fill in all fields.', 'error');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match.');
+      showFeedback('Error', 'Passwords do not match.', 'error');
       return;
     }
 
@@ -54,24 +80,23 @@ export default function Signup() {
         last_name: lastName    
       });
 
-      Alert.alert(
-        "Success", 
-        "Account created successfully! Please log in.",
-        [
-            { 
-                text: "OK", 
-                onPress: () => {
-                    setFirstName('');
-                    setMiddleName('');
-                    setLastName('');
-                    setUsername('');
-                    setEmail('');
-                    setPassword('');
-                    setConfirmPassword('');
-                    navigation.navigate('Login');
-                } 
-            }
-        ]
+      showFeedback(
+        'Success',
+        'Account created successfully! Please log in.',
+        'success',
+        [{
+          label: 'OK',
+          onPress: () => {
+            setFirstName('');
+            setMiddleName('');
+            setLastName('');
+            setUsername('');
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+            navigation.navigate('Login');
+          },
+        }]
       );
 
     } catch (error: any) {
@@ -88,7 +113,7 @@ export default function Signup() {
              msg = String(data);
           }
       }
-      Alert.alert('Signup Failed', msg);
+      showFeedback('Signup Failed', msg, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -190,6 +215,15 @@ export default function Signup() {
               </View>
             </View>
           </View>
+
+          <FeedbackModal
+            visible={feedbackModal.visible}
+            title={feedbackModal.title}
+            message={feedbackModal.message}
+            variant={feedbackModal.variant}
+            actions={feedbackModal.actions}
+            onClose={closeFeedback}
+          />
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>

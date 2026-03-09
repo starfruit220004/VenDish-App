@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -7,7 +7,6 @@ import {
   TouchableOpacity, 
   ScrollView, 
   useColorScheme, 
-  Alert,
   Modal,
   TextInput,
   ActivityIndicator,
@@ -16,14 +15,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../../api/api';
-//
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { deactivateAccount } from '../services/authServices';
+import FeedbackModal, { FeedbackAction, FeedbackVariant } from './FeedbackModal';
 
 export default function Profile() {
-  const { userData, userToken, logout } = useContext(AuthContext);
+  const { userData, logout } = useAuth();
   const navigation = useNavigation();
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
@@ -32,16 +29,66 @@ export default function Profile() {
   const [isDeactivateModalVisible, setDeactivateModalVisible] = useState(false);
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [feedbackModal, setFeedbackModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    variant: FeedbackVariant;
+    actions?: FeedbackAction[];
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    variant: 'info',
+  });
+
+  const showFeedback = (
+    title: string,
+    message: string,
+    variant: FeedbackVariant = 'info',
+    actions?: FeedbackAction[]
+  ) => {
+    setFeedbackModal({ visible: true, title, message, variant, actions });
+  };
+
+  const closeFeedback = () => {
+    setFeedbackModal(prev => ({ ...prev, visible: false }));
+  };
 
   const handleLogout = async () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to log out?",
+    showFeedback(
+      'Logout',
+      'Are you sure you want to log out?',
+      'warning',
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Logout", onPress: async () => {
-            await logout();
-        }, style: "destructive" }
+        { label: 'Cancel', style: 'secondary' },
+        { 
+          label: 'Logout', 
+          style: 'danger', 
+          onPress: async () => { 
+            await logout(); 
+            
+            // Show the success modal reusing the existing FeedbackModal
+            showFeedback(
+              'Success',
+              'You successfully logout.',
+              'success',
+              [{
+                label: 'OK',
+                onPress: () => {
+                  // Navigate to the Promos tab after acknowledging the modal
+                  (navigation as any).reset({
+                    index: 0,
+                    routes: [{ 
+                      name: 'Tabs', 
+                      params: { screen: 'Promos' } 
+                    }],
+                  });
+                }
+              }]
+            );
+          } 
+        },
       ]
     );
   };
@@ -54,33 +101,37 @@ export default function Profile() {
 
   const confirmDeactivation = async () => {
     if (!password) {
-      Alert.alert("Error", "Please enter your password to confirm.");
+      showFeedback('Error', 'Please enter your password to confirm.', 'error');
       return;
     }
 
     setIsLoading(true);
     try {
-      // Call the deactivation service with the userToken
-      await deactivateAccount(password, userToken);
-      
-      Alert.alert("Success", "Your account has been deactivated.");
-      
+      // Token is auto-attached by the API interceptor
+      await deactivateAccount(password);
+
       // Close modal
       setDeactivateModalVisible(false);
       setPassword('');
-      
-      // Logout after successful deactivation
-      setTimeout(async () => {
-        await logout();
-        // Navigate to home/Tabs after logout
-        (navigation as any).reset({
-          index: 0,
-          routes: [{ name: 'Tabs' }],
-        });
-      }, 500);
+
+      showFeedback(
+        'Success',
+        'Your account has been deactivated.',
+        'success',
+        [{
+          label: 'OK',
+          onPress: async () => {
+            await logout();
+            (navigation as any).reset({
+              index: 0,
+              routes: [{ name: 'Tabs' }],
+            });
+          },
+        }]
+      );
     } catch (error: any) {
       console.error("Deactivation Error:", error.response?.data || error.message);
-      Alert.alert("Error", error.response?.data?.error || "Failed to deactivate account");
+      showFeedback('Error', error.response?.data?.error || 'Failed to deactivate account', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -251,6 +302,15 @@ export default function Profile() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <FeedbackModal
+        visible={feedbackModal.visible}
+        title={feedbackModal.title}
+        message={feedbackModal.message}
+        variant={feedbackModal.variant}
+        actions={feedbackModal.actions}
+        onClose={closeFeedback}
+      />
 
     </ScrollView>
   );

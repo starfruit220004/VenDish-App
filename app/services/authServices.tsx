@@ -1,32 +1,14 @@
 // app/services/authServices.tsx
+//
+// The api instance (../../api/api) automatically attaches the access token
+// to every request via its request interceptor, and handles 401 refresh
+// automatically via its response interceptor.
+//
+// There is NO need to manually pass tokens or read from AsyncStorage here.
+
 import api from '../../api/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const deactivateAccount = async (password: string, contextToken: string | null = null) => {
-  // 1. Try the token passed from React Context
-  let token = contextToken;
-
-  // 2. FALLBACK: If Context is mysteriously null, fetch directly from physical storage
-  if (!token) {
-    console.log("Context token was missing, fetching directly from AsyncStorage...");
-    token = await AsyncStorage.getItem('access_token');
-  }
-
-  // 3. Final safety check
-  if (!token) {
-    throw new Error("Missing authentication token. Please log out and log in again.");
-  }
-
-  console.log("Token successfully found. Proceeding with deactivation...");
-
-  // Force the token into the headers
-  return api.post(
-    '/firstapp/users/deactivate/', 
-    { password },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
-  );
+export const deactivateAccount = async (password: string) => {
+  // Token is auto-attached by the API interceptor — no manual header needed
+  return api.post('/firstapp/users/deactivate/', { password });
 };

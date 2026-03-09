@@ -1,10 +1,10 @@
-import React, { useState, useContext, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, useColorScheme, Modal, Alert } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, useColorScheme, Modal } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useReviews } from './ReviewsContext';
 import api from "../../api/api";
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 type WriteShopReviewProps = {
   navigation: any;
@@ -15,7 +15,7 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
   const { addShopReview, hasReviewedShopToday } = useReviews();
-  const { isLoggedIn, userData } = useContext(AuthContext);
+  const { isLoggedIn, userData } = useAuth();
 
   const [review, setReview] = useState("");
   const [rating, setRating] = useState(0);
@@ -26,18 +26,14 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    if (isSubmitting || showSuccessModal) return;
-
+    // Show the custom modal instead of the native Alert
     if (isLoggedIn && userData) {
       if (hasReviewedShopToday(userData.username)) {
-        Alert.alert(
-          "Daily Limit Reached", 
-          "You can only submit one shop review per day. Please come back tomorrow!", 
-          [{ text: "OK", onPress: () => navigation.goBack() }]
-        );
+        setErrorMessage("You can only submit one shop review per day. Please come back tomorrow!");
+        setErrorModalVisible(true);
       }
     }
-  }, [isLoggedIn, userData, hasReviewedShopToday, isSubmitting, showSuccessModal]);
+  }, [isLoggedIn, userData, hasReviewedShopToday]);
 
   const pickMedia = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -68,14 +64,13 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
       return;
     }
     if (hasReviewedShopToday(userData.username)) {
-      setErrorMessage('You can only submit one shop review per day.');
+      setErrorMessage('You can only submit one shop review per day. Please come back tomorrow!');
       setErrorModalVisible(true);
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // Create FormData to handle image upload
       const formData = new FormData();
       formData.append('review_type', 'shop');
       formData.append('rating', rating.toString());
@@ -90,8 +85,6 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
         });
       }
 
-      // POST to the new backend endpoint
-      // Note: We use 'Content-Type': 'multipart/form-data' which axios handles automatically with FormData
       await api.post('/firstapp/reviews/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -110,7 +103,10 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
 
     } catch (error: any) {
       console.error("Review Error:", error);
-      const msg = error.response?.data ? JSON.stringify(error.response.data) : 'Failed to submit review.';
+      // Cleanly extract the error message from the backend
+      const errorData = error.response?.data;
+      const msg = errorData?.error ? errorData.error : (errorData ? JSON.stringify(errorData) : 'Failed to submit review.');
+      
       setErrorMessage(msg);
       setErrorModalVisible(true);
     } finally {
@@ -120,6 +116,14 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
 
   const removeMedia = () => {
     setMedia(null);
+  };
+
+  const handleErrorModalClose = () => {
+    setErrorModalVisible(false);
+    // If they hit the daily limit, pop them back to the previous screen when they dismiss the error
+    if (isLoggedIn && userData && hasReviewedShopToday(userData.username)) {
+      navigation.goBack();
+    }
   };
 
   return (
@@ -292,14 +296,14 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
           ]}>
             <Ionicons name="alert-circle" size={64} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
             <Text style={[styles.modalTitle, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
-              Error
+              Oops!
             </Text>
             <Text style={[styles.modalText, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
               {errorMessage}
             </Text>
             <TouchableOpacity 
               style={[styles.modalButton, { backgroundColor: '#B71C1C' }]}
-              onPress={() => setErrorModalVisible(false)}
+              onPress={handleErrorModalClose}
               activeOpacity={0.8}
             >
               <Text style={styles.modalButtonText}>OK</Text>

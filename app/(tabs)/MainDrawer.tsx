@@ -1,16 +1,15 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { 
-  useColorScheme, 
-  StyleSheet, 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  Image, 
+import React, { useState, useEffect } from 'react';
+import {
+  useColorScheme,
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  Image,
   StatusBar,
   Modal,
   FlatList,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,8 +18,6 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- IMPORTS ---
-import api from '../../api/api'; 
-import { setLogoutHandler } from '../../api/api';
 import TabNavigator from './TabNavigator';
 import FAQScreen from './FAQ';
 import Profile from './Profile';
@@ -31,14 +28,9 @@ import PrivacyPolicy from '../(tabs)/PrivacyPolicy';
 import TermsAndConditions from '../(tabs)/TermsAndConditions';
 import AboutTab from '../(tabs)/AboutTab';
 
-// IMPORT THE CONTEXT
-import { AuthContext, UserData, Coupon } from '../context/AuthContext'; 
-
-const AUTH_KEY = '@user_authenticated';
-const USER_DATA_KEY = 'user_data';
-const COUPON_WALLET_KEY = 'claimed_coupons';
-const ACCESS_TOKEN_KEY = 'access_token';
-const REFRESH_TOKEN_KEY = 'refresh_token';
+// SINGLE SOURCE OF TRUTH — consume context, never re-declare state
+import { useAuth, Coupon } from '../context/AuthContext';
+import FeedbackModal, { FeedbackAction, FeedbackVariant } from './FeedbackModal';
 
 type DrawerParamList = {
   Tabs: undefined;
@@ -54,11 +46,20 @@ type DrawerParamList = {
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
-// --- CUSTOM DRAWER COMPONENT ---
-function CustomDrawerContent(props: DrawerContentComponentProps) {
+// ─── Custom Drawer Content ────────────────────────────────────────────────────
+type CustomDrawerContentProps = DrawerContentComponentProps & {
+  showFeedback: (
+    title: string,
+    message: string,
+    variant?: FeedbackVariant,
+    actions?: FeedbackAction[]
+  ) => void;
+};
+
+function CustomDrawerContent(props: CustomDrawerContentProps) {
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
-  const { isLoggedIn, logout } = useContext(AuthContext);
+  const { isLoggedIn, logout } = useAuth();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const toggleSettings = () => setSettingsOpen(!settingsOpen);
@@ -71,7 +72,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
     else if (screen === 'About') props.navigation.navigate('About' as never);
     else if (screen === 'Logout') {
       await logout();
-      Alert.alert('Logged out', 'You have been logged out successfully.');
+      props.showFeedback('Logged out', 'You have been logged out successfully.', 'success');
       props.navigation.navigate('Tabs' as never);
     }
   };
@@ -151,46 +152,57 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
   );
 }
 
-// --- MAIN DRAWER NAVIGATION ---
+// ─── Main Drawer Navigation ──────────────────────────────────────────────────
 
 export default function MainDrawer() {
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [userToken, setUserToken] = useState<string | null>(null);
-  const [claimedCoupons, setClaimedCoupons] = useState<Coupon[]>([]); 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false); // ✅ Added Pull-to-refresh state
+  // All auth state now comes from the single AuthContext
+  const {
+    isLoggedIn,
+    isAuthLoading,
+    claimedCoupons,
+    removeFromWallet,
+    fetchMyCoupons,
+    isCouponRefreshing,
+  } = useAuth();
 
   const [couponModalVisible, setCouponModalVisible] = useState(false);
   const [posModalVisible, setPosModalVisible] = useState(false);
   const [selectedPosCoupon, setSelectedPosCoupon] = useState<Coupon | null>(null);
+  const [feedbackModal, setFeedbackModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    variant: FeedbackVariant;
+    actions?: FeedbackAction[];
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    variant: 'info',
+  });
 
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
+  const showFeedback = (
+    title: string,
+    message: string,
+    variant: FeedbackVariant = 'info',
+    actions?: FeedbackAction[]
+  ) => {
+    setFeedbackModal({ visible: true, title, message, variant, actions });
+  };
 
-  // ✅ Auto-refresh when the wallet modal opens
+  const closeFeedback = () => {
+    setFeedbackModal(prev => ({ ...prev, visible: false }));
+  };
+
+  // Auto-refresh coupons when wallet modal opens
   useEffect(() => {
     if (couponModalVisible && isLoggedIn) {
-      fetchMyCoupons(false); // Silently fetch fresh data when wallet opens
+      fetchMyCoupons(false);
     }
-  }, [couponModalVisible, isLoggedIn]);
-
-  // Register a lightweight logout handler so the API interceptor can
-  // reset React state when a refresh token dies. Tokens are already
-  // cleared from AsyncStorage by the interceptor itself.
-  useEffect(() => {
-    setLogoutHandler(() => {
-      setIsLoggedIn(false);
-      setUserData(null);
-      setUserToken(null);
-      setClaimedCoupons([]);
-    });
-    return () => setLogoutHandler(null);
-  }, []);
+  }, [couponModalVisible, isLoggedIn, fetchMyCoupons]);
 
   // Helper to format date
   const formatDate = (dateString: string | undefined) => {
@@ -199,129 +211,16 @@ export default function MainDrawer() {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  // ✅ Modified to support optional spinner toggling for RefreshControl
-  const fetchMyCoupons = async (showSpinner = false) => {
-    if (showSpinner) setIsRefreshing(true);
-    try {
-        // Token is automatically attached by the API interceptor
-        const response = await api.get('/firstapp/coupons/mine/');
-
-        // ✅ Map expiration + reflect POS usage via is_used flag + detect expired
-        const now = new Date();
-        const coupons = response.data.map((item: any) => {
-            const expiration = item.criteria_details?.valid_to || item.valid_to;
-            const isExpired = expiration ? new Date(expiration) < now : false;
-            let status = item.status || 'Active';
-            if (item.is_used) status = 'Redeemed';
-            else if (isExpired || status.toLowerCase() === 'expired') status = 'Expired';
-            return { ...item, status, expiration };
-        });
-        
-        setClaimedCoupons(coupons);
-        await AsyncStorage.setItem(COUPON_WALLET_KEY, JSON.stringify(coupons));
-
-    } catch (error: any) {
-        console.error("Failed to fetch my coupons:", error);
-        // ✅ 2. Handle 401 Logout
-        if (error.response && error.response.status === 401) {
-            await logout(); 
-            Alert.alert("Session Expired", "Please login again.");
-        }
-    } finally {
-        if (showSpinner) setIsRefreshing(false);
-    }
-  };
-
-  const checkAuthStatus = async () => {
-    try {
-      const authStatus = await AsyncStorage.getItem(AUTH_KEY);
-      const storedUserData = await AsyncStorage.getItem(USER_DATA_KEY);
-      const storedToken = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
-      
-      if (authStatus === 'true' && storedUserData && storedToken) {
-        setIsLoggedIn(true);
-        setUserData(JSON.parse(storedUserData));
-        setUserToken(storedToken);
-        await fetchMyCoupons();
-      } else {
-        const storedCoupons = await AsyncStorage.getItem(COUPON_WALLET_KEY);
-        if (storedCoupons) {
-            setClaimedCoupons(JSON.parse(storedCoupons));
-        }
-      }
-    } catch (error) {
-      console.error('Error checking auth status:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const login = async (user: UserData, access: string, refresh: string) => {
-    try {
-      await AsyncStorage.setItem(AUTH_KEY, 'true');
-      await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
-      await AsyncStorage.setItem(ACCESS_TOKEN_KEY, access);
-      await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refresh);
-
-      setIsLoggedIn(true);
-      setUserData(user);
-      setUserToken(access);
-      await fetchMyCoupons();
-
-    } catch (error) {
-      console.error('Error saving auth status:', error);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await AsyncStorage.removeItem(AUTH_KEY);
-      await AsyncStorage.removeItem(USER_DATA_KEY);
-      await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
-      await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
-      await AsyncStorage.removeItem(COUPON_WALLET_KEY);
-
-      setIsLoggedIn(false);
-      setUserData(null);
-      setUserToken(null);
-      setClaimedCoupons([]); 
-    } catch (error) {
-      console.error('Error removing auth status:', error);
-    }
-  };
-
-  const updateUserData = async (user: UserData) => {
-    try {
-      await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
-      setUserData(user);
-    } catch (error) {
-      console.error('Error updating user data:', error);
-    }
-  };
-
-  const addToWallet = async (coupon: Coupon) => {
-    const exists = claimedCoupons.find(c => c.id === coupon.id);
-    if (exists) return false; 
-    
-    const updatedWallet = [coupon, ...claimedCoupons];
-    setClaimedCoupons(updatedWallet);
-    await AsyncStorage.setItem(COUPON_WALLET_KEY, JSON.stringify(updatedWallet));
-    return true;
-  };
-
-  const removeFromWallet = async (id: number) => {
-    const updatedWallet = claimedCoupons.filter(c => c.id !== id);
-    setClaimedCoupons(updatedWallet);
-    await AsyncStorage.setItem(COUPON_WALLET_KEY, JSON.stringify(updatedWallet));
-  };
-
-  const markAsRedeemed = async (id: number) => {
-      const updatedWallet = claimedCoupons.map(c => 
-          c.id === id ? { ...c, status: 'Redeemed' as const } : c
-      );
-      setClaimedCoupons(updatedWallet);
-      await AsyncStorage.setItem(COUPON_WALLET_KEY, JSON.stringify(updatedWallet));
-      // ✅ 3. REMOVED fetchMyCoupons() to prevent overwriting local 'Redeemed' status
+  const handleRemoveCoupon = (couponId: number) => {
+    showFeedback(
+      'Remove Coupon',
+      'Are you sure you want to remove this coupon from your wallet?',
+      'warning',
+      [
+        { label: 'Cancel', style: 'secondary' },
+        { label: 'Remove', style: 'danger', onPress: async () => { await removeFromWallet(couponId); } },
+      ]
+    );
   };
 
   const openPosModal = (item: Coupon) => {
@@ -339,22 +238,21 @@ export default function MainDrawer() {
 
     return (
       <View style={[styles.couponItem, { backgroundColor: isDarkMode ? '#2C2C2E' : '#FFF', opacity: isDisabled ? 0.7 : 1 }]}>
-        {/* ✅ Dismiss button for expired coupons */}
-        {isExpired && (
+        {isDisabled && (
           <TouchableOpacity
             style={styles.dismissBtn}
-            onPress={() => removeFromWallet(item.id)}
+            onPress={() => handleRemoveCoupon(item.id)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="close-circle" size={22} color="#9E9E9E" />
+            <Ionicons name="close-circle" size={26} color="#9E9E9E" />
           </TouchableOpacity>
         )}
+
         <View style={styles.couponLeft}>
           <Text style={[styles.couponProduct, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>{item.product_name}</Text>
           <Text style={[styles.couponName, { color: isDarkMode ? '#BBB' : '#555' }]}>{item.name}</Text>
           <Text style={styles.couponCode}>Discount: <Text style={{fontWeight:'bold'}}>{item.rate === 'FREE' ? 'FREE ITEM' : `${item.rate} OFF`}</Text></Text>
           
-          {/* ✅ DISPLAY EXPIRY DATE */}
           {item.expiration && (
              <Text style={{fontSize: 11, color: isDarkMode ? '#888' : '#757575', marginTop: 4}}>
                 Expires: {formatDate(item.expiration)}
@@ -377,7 +275,7 @@ export default function MainDrawer() {
     );
   };
 
-  if (isLoading) {
+  if (isAuthLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: isDarkMode ? '#000' : '#FFEBEE' }]}>
         <ActivityIndicator size="large" color="#B71C1C" />
@@ -386,11 +284,11 @@ export default function MainDrawer() {
   }
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, userData, userToken, claimedCoupons, login, logout, updateUserData, addToWallet, removeFromWallet }}>
+    <>
       <StatusBar barStyle="light-content" backgroundColor={isDarkMode ? '#1C1C1E' : '#B71C1C'} translucent={false} />
       
       <Drawer.Navigator
-        drawerContent={(props) => <CustomDrawerContent {...props} />}
+        drawerContent={(props) => <CustomDrawerContent {...props} showFeedback={showFeedback} />}
         screenOptions={{
           headerShown: true,
           drawerStyle: { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF', width: 280 },
@@ -435,6 +333,7 @@ export default function MainDrawer() {
         <Drawer.Screen name="FAQ" component={FAQScreen} options={{ headerTitle: 'FAQ', headerStyle: { backgroundColor: isDarkMode ? '#1C1C1E' : '#B71C1C' }, headerTintColor: '#FFFFFF' }} />
       </Drawer.Navigator>
 
+      {/* Coupon Wallet Modal */}
       <Modal
         visible={couponModalVisible}
         animationType="slide"
@@ -461,10 +360,9 @@ export default function MainDrawer() {
                         keyExtractor={(item) => item.id.toString()}
                         renderItem={renderCouponItem}
                         contentContainerStyle={{padding: 16}}
-                        // ✅ Added pull-to-refresh logic here
                         refreshControl={
                             <RefreshControl 
-                                refreshing={isRefreshing} 
+                                refreshing={isCouponRefreshing} 
                                 onRefresh={() => fetchMyCoupons(true)} 
                                 colors={['#B71C1C']} 
                             />
@@ -475,6 +373,7 @@ export default function MainDrawer() {
         </View>
       </Modal>
 
+      {/* POS Redemption Modal */}
       <Modal
         visible={posModalVisible}
         animationType="fade"
@@ -496,9 +395,6 @@ export default function MainDrawer() {
                     <Text style={styles.posCodeText}>{selectedPosCoupon?.code}</Text>
                 </View>
 
-                {/* ✅ REMOVED 'MARK AS USED' BUTTON HERE */}
-                {/* Only Show Close/Cancel now */}
-
                 <TouchableOpacity 
                     style={{marginTop: 15, padding: 15}}
                     onPress={() => setPosModalVisible(false)}
@@ -509,7 +405,15 @@ export default function MainDrawer() {
         </View>
       </Modal>
 
-    </AuthContext.Provider>
+      <FeedbackModal
+        visible={feedbackModal.visible}
+        title={feedbackModal.title}
+        message={feedbackModal.message}
+        variant={feedbackModal.variant}
+        actions={feedbackModal.actions}
+        onClose={closeFeedback}
+      />
+    </>
   );
 }
 

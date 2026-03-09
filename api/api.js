@@ -1,20 +1,21 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// ─── Storage Keys (must match AuthContext.STORAGE_KEYS) ───────────────────────
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
-const LEGACY_ACCESS_TOKEN_KEY = '@access_token';
-const LEGACY_REFRESH_TOKEN_KEY = '@refresh_token';
-// const BASE_URL = 'https://vendish-food-business-sales-optimzation.onrender.com';
+
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
-// --- Logout handler registration (called from MainDrawer on mount) ---
+// ─── Logout handler registration ─────────────────────────────────────────────
+// AuthProvider registers a callback so the interceptor can reset React state
+// when a refresh token dies. Tokens are already cleared from AsyncStorage here.
 let _logoutHandler = null;
 export const setLogoutHandler = (handler) => {
   _logoutHandler = handler;
 };
 
-// --- Refresh queue: prevents multiple 401s from firing parallel refresh calls ---
+// ─── Refresh queue: prevents parallel 401s from firing multiple refreshes ────
 let _isRefreshing = false;
 let _refreshSubscribers = [];
 
@@ -28,20 +29,9 @@ const onRefreshFailed = () => {
   _refreshSubscribers = [];
 };
 
-// --- Helpers ---
-const getStoredToken = async (primaryKey, legacyKey) => {
-  const primary = await AsyncStorage.getItem(primaryKey);
-  if (primary) return primary;
-  return AsyncStorage.getItem(legacyKey);
-};
-
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const clearAuthTokens = async () => {
-  await AsyncStorage.multiRemove([
-    ACCESS_TOKEN_KEY,
-    REFRESH_TOKEN_KEY,
-    LEGACY_ACCESS_TOKEN_KEY,
-    LEGACY_REFRESH_TOKEN_KEY,
-  ]);
+  await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY]);
 };
 
 const handleLogout = async () => {
@@ -51,37 +41,38 @@ const handleLogout = async () => {
   }
 };
 
-// --- Axios instance ---
+// ─── Axios instance ───────────────────────────────────────────────────────────
 const api = axios.create({
-  baseURL: BASE_URL, 
+  baseURL: BASE_URL,
   headers: {
-    "Content-Type": "application/json",
-    "ngrok-skip-browser-warning": "69420", 
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': '69420',
   },
 });
 
-// 1. REQUEST INTERCEPTOR: Attach the access token to every outgoing request
+// 1. REQUEST INTERCEPTOR — attach the access token to every outgoing request
 api.interceptors.request.use(
   async (config) => {
     try {
-      const token = await getStoredToken(ACCESS_TOKEN_KEY, LEGACY_ACCESS_TOKEN_KEY);
+      const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
-      console.error("Error retrieving access token", error);
+      console.error('Error retrieving access token:', error);
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// 2. RESPONSE INTERCEPTOR: Automatically refresh the token if it expires
+// 2. RESPONSE INTERCEPTOR — automatically refresh the token on 401
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
+    // Only attempt refresh for 401 errors, and only once per request
     if (error.response?.status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
     }
@@ -104,17 +95,16 @@ api.interceptors.response.use(
     _isRefreshing = true;
 
     try {
-      const refreshToken = await getStoredToken(REFRESH_TOKEN_KEY, LEGACY_REFRESH_TOKEN_KEY);
+      const refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
 
       if (!refreshToken) {
-        // No refresh token stored at all — clean up and bail
         await handleLogout();
         _isRefreshing = false;
         onRefreshFailed();
         return Promise.reject(error);
       }
 
-      // Ask Django for a fresh access token
+      // Ask the backend for a fresh access token
       const res = await axios.post(`${BASE_URL}/firstapp/token/refresh/`, {
         refresh: refreshToken,
       });
@@ -122,13 +112,10 @@ api.interceptors.response.use(
       const newAccessToken = res.data.access;
       const newRefreshToken = res.data.refresh;
 
-      // Persist new tokens to both key sets
+      // Persist new tokens
       await AsyncStorage.setItem(ACCESS_TOKEN_KEY, newAccessToken);
-      await AsyncStorage.setItem(LEGACY_ACCESS_TOKEN_KEY, newAccessToken);
-
       if (newRefreshToken) {
         await AsyncStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
-        await AsyncStorage.setItem(LEGACY_REFRESH_TOKEN_KEY, newRefreshToken);
       }
 
       _isRefreshing = false;
@@ -139,7 +126,7 @@ api.interceptors.response.use(
       return api(originalRequest);
     } catch (refreshError) {
       // Refresh failed — tokens are dead, clean up everything
-      console.warn("Session expired. Clearing tokens and logging out.");
+      console.warn('Session expired. Clearing tokens and logging out.');
       await handleLogout();
       _isRefreshing = false;
       onRefreshFailed();
