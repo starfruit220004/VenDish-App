@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, TextInput, useColorScheme, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, TextInput, useColorScheme, ActivityIndicator, RefreshControl } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,11 +20,23 @@ function FeedHome({ navigation }: any) {
   const theme = getTheme(isDark);
 
   const [foods, setFoods] = useState<Food[]>([]);
+  const [apiCategories, setApiCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState('All');
   const [showFilter, setShowFilter] = React.useState(false);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await api.get('/firstapp/categories/');
+      const catNames = response.data.map((c: any) => c.name).filter(Boolean);
+      setApiCategories(catNames);
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    }
+  };
 
   const fetchFoods = async () => {
     try {
@@ -50,13 +62,22 @@ function FeedHome({ navigation }: any) {
     useCallback(() => {
       refreshReviews();
       fetchFoods();
+      fetchCategories();
     }, [refreshReviews])
   );
 
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([fetchFoods(), fetchCategories(), refreshReviews()]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refreshReviews]);
+
   const dynamicCategories = useMemo(() => {
-    const uniqueCategories = Array.from(new Set(foods.map(food => food.category).filter(Boolean)));
-    return ['All', ...uniqueCategories];
-  }, [foods]);
+    return ['All', ...apiCategories];
+  }, [apiCategories]);
 
   const filteredFoods = foods.filter(food => {
     const matchesSearch = food.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -82,6 +103,14 @@ function FeedHome({ navigation }: any) {
       style={[styles.scroll, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={onRefresh}
+          colors={[theme.accent]}
+          tintColor={theme.accent}
+        />
+      }
     >
       {/* ── Header ─────────────────────────────────────────────── */}
       <View style={styles.header}>
