@@ -348,7 +348,9 @@ export default function WriteReview({ route, navigation }: Props) {
                 style={[styles.profileGateBtn, { backgroundColor: '#F5F5F5' }]}
                 onPress={() => navigation.goBack()}
               >
-                <Text numberOfLines={1} style={{ color: '#333', fontWeight: '600', fontSize: 15 }}>Go Back</Text>
+                <Text style={{ color: '#333', fontWeight: '600', fontSize: 15 }}>
+  Go Back
+</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.profileGateBtn, { backgroundColor: '#B71C1C' }]}
@@ -356,7 +358,9 @@ export default function WriteReview({ route, navigation }: Props) {
                   (navigation as any).navigate('Profile');
                 }}
               >
-                <Text numberOfLines={1} style={{ color: '#FFF', fontWeight: '600', fontSize: 15 }}>Go to Profile</Text>
+                <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 15 }}>
+  Go to Profile
+</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -585,13 +589,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   profileGateButtons: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 12,
     width: '100%',
   },
   profileGateBtn: {
-    flex: 1,
+    width: '100%',
     paddingVertical: 14,
+    paddingHorizontal: 12,
     borderRadius: 12,
     alignItems: 'center',
   },

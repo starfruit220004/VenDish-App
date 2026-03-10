@@ -343,7 +343,7 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
                 style={[styles.modalButton, { backgroundColor: '#F5F5F5', flex: 1 }]}
                 onPress={() => navigation.goBack()}
               >
-                <Text numberOfLines={1} style={[styles.modalButtonText, { color: '#333' }]}>Go Back</Text>
+                <Text style={[styles.modalButtonText, { color: '#333' }]}>Go Back</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: '#B71C1C', flex: 1 }]}
@@ -351,7 +351,7 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
                   navigation.navigate('Profile');
                 }}
               >
-                <Text numberOfLines={1} style={styles.modalButtonText}>Go to Profile</Text>
+                <Text style={styles.modalButtonText}>Go to Profile</Text>
               </TouchableOpacity>
             </View>
           </View>
