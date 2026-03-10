@@ -74,15 +74,14 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "updates": {
-      "url": "https://u.expo.dev/3603b841-72b8-4dff-99ba-72bab743d592"
-    },
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "3603b841-72b8-4dff-99ba-72bab743d592"
+        "projectId": "6236644a-c791-4d2a-94bf-20faa2ef381f"
       }
     },
-    "owner": "erzhadqt"
+    "updates": {
+      "url": "https://u.expo.dev/6236644a-c791-4d2a-94bf-20faa2ef381f"
+    }
   }
 }

@@ -9,19 +9,22 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_BASE_URL": "https://vendish-food-business-sales-optimzation.onrender.com"
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_BASE_URL": "https://vendish-food-business-sales-optimzation.onrender.com"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_BASE_URL": "https://vendish-food-business-sales-optimzation.onrender.com"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {
