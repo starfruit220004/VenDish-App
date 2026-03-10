@@ -281,7 +281,7 @@ export default function Profile() {
           <Text numberOfLines={1} style={[styles.name, { color: theme.textPrimary }]}>
               {userData?.firstname} {userData?.middlename ? userData.middlename + ' ' : ''}{userData?.lastname}
           </Text>
-          <Text style={[styles.username, { color: theme.textSecondary }]}>
+          <Text numberOfLines={1} style={[styles.username, { color: theme.textSecondary }]}>
               @{userData?.username || 'user'}
           </Text>
         </View>
