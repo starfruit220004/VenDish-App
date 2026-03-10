@@ -33,6 +33,18 @@
             "BROWSABLE",
             "DEFAULT"
           ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "food"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -63,7 +75,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/531beae2-5e19-471b-8598-ec0e32ea490c"
+      "url": "https://u.expo.dev/3603b841-72b8-4dff-99ba-72bab743d592"
     },
     "extra": {
       "router": {},

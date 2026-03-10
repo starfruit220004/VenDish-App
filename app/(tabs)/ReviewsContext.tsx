@@ -127,7 +127,8 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
       }
 
       await api.post('/firstapp/reviews/', formData, {
-        headers: { 'Content-Type': undefined },
+        headers: { 'Content-Type': 'multipart/form-data' },
+        transformRequest: (data: any) => data,
       });
 
       // Refresh list after posting
@@ -157,7 +158,8 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
       }
 
       await api.post('/firstapp/reviews/', formData, {
-        headers: { 'Content-Type': undefined },
+        headers: { 'Content-Type': 'multipart/form-data' },
+        transformRequest: (data: any) => data,
       });
 
       await loadReviews();
