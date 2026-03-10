@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
-const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
+const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL || 'https://vendish-food-business-sales-optimzation.onrender.com';
 
 // ─── Logout handler registration ─────────────────────────────────────────────
 // AuthProvider registers a callback so the interceptor can reset React state
