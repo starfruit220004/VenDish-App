@@ -69,7 +69,9 @@
       }
     },
     "updates": {
-      "url": "https://u.expo.dev/6236644a-c791-4d2a-94bf-20faa2ef381f"
+      "url": "https://u.expo.dev/6236644a-c791-4d2a-94bf-20faa2ef381f",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
     }
   }
 }
