@@ -101,22 +101,31 @@ export default function Profile() {
   const saveProfile = async () => {
     setIsSaving(true);
     try {
-      const formData = new FormData();
-      formData.append('phone', editPhone.trim());
-      formData.append('address', editAddress.trim());
+      let response;
 
       if (editProfilePic) {
+        // Image upload → must use FormData + multipart
+        const formData = new FormData();
+        formData.append('phone', editPhone.trim());
+        formData.append('address', editAddress.trim());
         // @ts-ignore – React Native FormData accepts this shape
         formData.append('profile_pic', {
           uri: editProfilePic,
           name: 'profile_pic.jpg',
           type: 'image/jpeg',
         });
-      }
 
-      const response = await api.patch('/firstapp/users/me/', formData, {
-        headers: { 'Content-Type': undefined },
-      });
+        response = await api.patch('/firstapp/users/me/', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          transformRequest: (data: any) => data,
+        });
+      } else {
+        // Text-only update → plain JSON (no FormData needed)
+        response = await api.patch('/firstapp/users/me/', {
+          phone: editPhone.trim(),
+          address: editAddress.trim(),
+        });
+      }
 
       const backendUser = response.data;
 
@@ -133,7 +142,15 @@ export default function Profile() {
       showFeedback('Profile Updated', 'Your profile has been saved successfully.', 'success');
     } catch (error: any) {
       console.error('Profile update error:', error.response?.data || error.message);
-      showFeedback('Error', 'Failed to update profile. Please try again.', 'error');
+      let msg = 'Failed to update profile. Please try again.';
+      if (error.response?.data && typeof error.response.data === 'object') {
+        const firstKey = Object.keys(error.response.data)[0];
+        if (firstKey) {
+          const val = error.response.data[firstKey];
+          msg = `${firstKey}: ${Array.isArray(val) ? val[0] : val}`;
+        }
+      }
+      showFeedback('Error', msg, 'error');
     } finally {
       setIsSaving(false);
     }

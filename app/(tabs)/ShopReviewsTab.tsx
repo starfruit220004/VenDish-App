@@ -67,7 +67,7 @@ function ShopReviewsHome({ navigation }: any) {
             {averageRating > 0 ? averageRating.toFixed(1) : '0.0'}
           </Text>
           {renderStars(averageRating)}
-          <Text style={[styles.ratingCount, { color: theme.textMuted }]}>
+          <Text numberOfLines={1} style={[styles.ratingCount, { color: theme.textMuted }]}>
             {shopReviews.length} {shopReviews.length === 1 ? 'review' : 'reviews'}
           </Text>
         </View>
