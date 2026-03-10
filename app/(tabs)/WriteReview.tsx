@@ -105,6 +105,11 @@ export default function WriteReview({ route, navigation }: Props) {
       return;
     }
 
+    if (profileIncomplete) {
+      setProfileIncomplete(true);
+      return;
+    }
+
     if (rating === 0) {
       showFeedback('Error', 'Please select a rating!', 'error');
       return;
@@ -348,7 +353,6 @@ export default function WriteReview({ route, navigation }: Props) {
               <TouchableOpacity
                 style={[styles.profileGateBtn, { backgroundColor: '#B71C1C' }]}
                 onPress={() => {
-                  setProfileIncomplete(false);
                   (navigation as any).navigate('Profile');
                 }}
               >

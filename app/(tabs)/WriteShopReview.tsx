@@ -65,6 +65,12 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
       setErrorModalVisible(true);
       return;
     }
+
+    if (profileIncomplete) {
+      setProfileIncomplete(true);
+      return;
+    }
+
     if (rating === 0) {
       setErrorMessage('Please select a rating!');
       setErrorModalVisible(true);
@@ -342,7 +348,6 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: '#B71C1C', flex: 1 }]}
                 onPress={() => {
-                  setProfileIncomplete(false);
                   navigation.navigate('Profile');
                 }}
               >

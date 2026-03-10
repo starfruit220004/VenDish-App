@@ -229,161 +229,187 @@ export default function Profile() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
-      
-      {/* Header Section */}
-      <View style={[styles.header, { backgroundColor: theme.surface }, theme.cardShadow]}>
-        <View style={styles.avatarContainer}>
-            {(editProfilePic || userData?.profilePic) ? (
-                <Image source={{ uri: editProfilePic || userData?.profilePic }} style={styles.avatar} />
-            ) : (
-                <View style={[styles.avatarPlaceholder, { backgroundColor: theme.accent }]}>
-                    <Text style={styles.avatarInitials}>{getInitials()}</Text>
-                </View>
-            )}
-            {isEditing && (
-              <TouchableOpacity style={[styles.editIconBadge, { backgroundColor: theme.surfaceElevated }]} onPress={pickProfileImage}>
-                  <Ionicons name="camera" size={14} color={theme.accent} />
-              </TouchableOpacity>
-            )}
-        </View>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0} 
+    >
+      <ScrollView 
+        contentContainerStyle={{ 
+          flexGrow: 1, 
+          paddingBottom: 150 
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets={true}
+      >
+        
+        {/* Header Section */}
+        <View style={[styles.header, { backgroundColor: theme.surface }, theme.cardShadow]}>
+          <View style={styles.avatarContainer}>
+              {(editProfilePic || userData?.profilePic) ? (
+                  <Image source={{ uri: editProfilePic || userData?.profilePic }} style={styles.avatar} />
+              ) : (
+                  <View style={[styles.avatarPlaceholder, { backgroundColor: theme.accent }]}>
+                      <Text style={styles.avatarInitials}>{getInitials()}</Text>
+                  </View>
+              )}
+              {isEditing && (
+                <TouchableOpacity style={[styles.editIconBadge, { backgroundColor: theme.surfaceElevated }]} onPress={pickProfileImage}>
+                    <Ionicons name="camera" size={14} color={theme.accent} />
+                </TouchableOpacity>
+              )}
+          </View>
 
-        <Text style={[styles.name, { color: theme.textPrimary }]}>
-            {userData?.firstname} {userData?.middlename ? userData.middlename + ' ' : ''}{userData?.lastname}
-        </Text>
-        <Text style={[styles.username, { color: theme.textSecondary }]}>
-            @{userData?.username || 'user'}
-        </Text>
-      </View>
-
-      {/* Info Section */}
-      <View style={styles.section}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-          {/* Added flex: 1 so the title doesn't crush the buttons on small screens */}
-          <Text style={[styles.sectionTitle, { color: theme.textMuted, marginBottom: 0, flex: 1 }]}>
-            Personal Information
+          <Text numberOfLines={1} style={[styles.name, { color: theme.textPrimary }]}>
+              {userData?.firstname} {userData?.middlename ? userData.middlename + ' ' : ''}{userData?.lastname}
           </Text>
-          
-          {!isEditing ? (
-            <TouchableOpacity onPress={startEditing} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Ionicons name="create-outline" size={18} color={theme.accent} />
-              {/* Added flexShrink: 0 to force the text to stay on one line */}
-              <Text style={[typography.labelMd, { color: theme.accent, flexShrink: 0 }]}>Edit</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-              <TouchableOpacity onPress={cancelEditing} disabled={isSaving}>
-                <Text style={[typography.labelSm, { color: theme.textMuted, flexShrink: 0 }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={saveProfile} disabled={isSaving} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
-                {isSaving ? (
-                  <ActivityIndicator size="small" color={theme.accent} />
-                ) : (
-                  <>
-                    <Ionicons name="checkmark-circle-outline" size={18} color={theme.accent} />
-                    <Text style={[typography.labelSm, { color: theme.accent, flexShrink: 0 }]}>Save</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
+          <Text style={[styles.username, { color: theme.textSecondary }]}>
+              @{userData?.username || 'user'}
+          </Text>
         </View>
-        
-        <View style={[styles.infoCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
-            <View style={styles.infoRow}>
-                <View style={styles.infoLabelContainer}>
-                    <Ionicons name="mail-outline" size={20} color={theme.accent} />
-                    <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Email</Text>
-                </View>
-                <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{userData?.email || 'N/A'}</Text>
-            </View>
 
-            <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
-
-            <View style={styles.infoRow}>
-                 <View style={styles.infoLabelContainer}>
-                    <Ionicons name="person-outline" size={20} color={theme.accent} />
-                    <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Full Name</Text>
-                </View>
-                <Text style={[styles.infoValue, { color: theme.textPrimary }]}>
-                    {userData?.firstname} {userData?.middlename ? userData.middlename + '. ' : ''}{userData?.lastname}
-                </Text>
-            </View>
-
-            <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
-
-            {/* Phone */}
-            <View style={styles.infoRow}>
-                <View style={styles.infoLabelContainer}>
-                    <Ionicons name="call-outline" size={20} color={theme.accent} />
-                    <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Phone</Text>
-                </View>
-                {isEditing ? (
-                  <TextInput
-                    style={[styles.editInput, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
-                    value={editPhone}
-                    onChangeText={setEditPhone}
-                    placeholder="Enter phone number"
-                    placeholderTextColor={theme.textDisabled}
-                    keyboardType="phone-pad"
-                  />
-                ) : (
-                  <Text style={[styles.infoValue, { color: userData?.phone ? theme.textPrimary : theme.textDisabled }]}>
-                    {userData?.phone || 'Not set'}
-                  </Text>
-                )}
-            </View>
-
-            <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
-
-            {/* Address */}
-            <View style={styles.infoRow}>
-                <View style={styles.infoLabelContainer}>
-                    <Ionicons name="location-outline" size={20} color={theme.accent} />
-                    <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Address</Text>
-                </View>
-                {isEditing ? (
-                  <TextInput
-                    style={[styles.editInput, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
-                    value={editAddress}
-                    onChangeText={setEditAddress}
-                    placeholder="Enter your address"
-                    placeholderTextColor={theme.textDisabled}
-                    multiline
-                  />
-                ) : (
-                  <Text style={[styles.infoValue, { color: userData?.address ? theme.textPrimary : theme.textDisabled, flex: 1, textAlign: 'right' }]}>
-                    {userData?.address || 'Not set'}
-                  </Text>
-                )}
-            </View>
-        </View>
-      </View>
-
-      {/* Account Actions Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Account</Text>
-        
-        <View style={[styles.infoCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+        {/* Info Section */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+            <Text style={[styles.sectionTitle, { color: theme.textMuted, marginBottom: 0, flex: 1 }]}>
+              Personal Information
+            </Text>
             
-            <TouchableOpacity style={styles.menuItem} onPress={handleDeactivate}>
-                <View style={styles.menuItemLeft}>
-                    <Ionicons name="trash-outline" size={22} color={theme.textPrimary} />
-                    <Text style={[styles.menuItemText, { color: theme.textPrimary }]}>Deactivate Account</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
-            </TouchableOpacity>
+            {!isEditing ? (
+              <TouchableOpacity onPress={startEditing} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <Ionicons name="create-outline" size={18} color={theme.accent} />
+                <Text style={[typography.labelMd, { color: theme.accent, flexShrink: 0 }]}>Edit</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <TouchableOpacity onPress={cancelEditing} disabled={isSaving}>
+                  <Text style={[typography.labelSm, { color: theme.textMuted, flexShrink: 0 }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={saveProfile} disabled={isSaving} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
+                  {isSaving ? (
+                    <ActivityIndicator size="small" color={theme.accent} />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle-outline" size={18} color={theme.accent} />
+                      <Text numberOfLines={1} style={[typography.labelSm, { color: theme.accent, flexShrink: 0 }]}>Save</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+          
+          <View style={[styles.infoCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+              <View style={styles.infoRow}>
+                  <View style={styles.infoLabelContainer}>
+                      <Ionicons name="mail-outline" size={20} color={theme.accent} />
+                      <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Email</Text>
+                  </View>
+                  <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{userData?.email || 'N/A'}</Text>
+              </View>
 
-            <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
+              <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
 
-            <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-                <View style={styles.menuItemLeft}>
-                    <Ionicons name="log-out-outline" size={22} color={palette.error} />
-                    <Text style={[styles.menuItemText, { color: palette.error }]}>Log Out</Text>
-                </View>
-            </TouchableOpacity>
+              <View style={styles.infoRow}>
+                   <View style={styles.infoLabelContainer}>
+                      <Ionicons name="person-outline" size={20} color={theme.accent} />
+                      <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Full Name</Text>
+                  </View>
+                  <Text style={[styles.infoValue, { color: theme.textPrimary }]}>
+                      {userData?.firstname} {userData?.middlename ? userData.middlename + '. ' : ''}{userData?.lastname}
+                  </Text>
+              </View>
+
+              <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
+
+              {/* Phone */}
+              <View style={styles.infoRow}>
+                  <View style={styles.infoLabelContainer}>
+                      <Ionicons name="call-outline" size={20} color={theme.accent} />
+                      <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Phone</Text>
+                  </View>
+                  {isEditing ? (
+                    <TextInput
+                      style={[styles.editInput, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
+                      value={editPhone}
+                      onChangeText={setEditPhone}
+                      placeholder="Enter phone number"
+                      placeholderTextColor={theme.textDisabled}
+                      keyboardType="phone-pad"
+                    />
+                  ) : (
+                    <Text style={[styles.infoValue, { color: userData?.phone ? theme.textPrimary : theme.textDisabled }]}>
+                      {userData?.phone || 'Not set'}
+                    </Text>
+                  )}
+              </View>
+
+              <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
+
+              {/* Address - UPDATED LAYOUT */}
+              <View style={[styles.infoRow, { flexDirection: 'column', alignItems: 'flex-start', gap: spacing.sm }]}>
+                  <View style={styles.infoLabelContainer}>
+                      <Ionicons name="location-outline" size={20} color={theme.accent} />
+                      <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Address</Text>
+                  </View>
+                  {isEditing ? (
+                    <TextInput
+                      style={[styles.editInput, { 
+                        color: theme.textPrimary, 
+                        borderColor: theme.border, 
+                        backgroundColor: theme.surfaceElevated,
+                        width: '100%',
+                        textAlign: 'left',
+                        minHeight: 70,
+                        paddingTop: spacing.sm
+                      }]}
+                      value={editAddress}
+                      onChangeText={setEditAddress}
+                      placeholder="Unit/House No./Street Name/Barangay/City/Zip Code"
+                      placeholderTextColor={theme.textDisabled}
+                      multiline
+                      textAlignVertical="top"
+                    />
+                  ) : (
+                    <Text style={[styles.infoValue, { 
+                      color: userData?.address ? theme.textPrimary : theme.textDisabled, 
+                      textAlign: 'left',
+                      width: '100%',
+                      paddingLeft: 28 // Indents slightly to align with text above, bypassing the icon
+                    }]}>
+                      {userData?.address || 'Not set'}
+                    </Text>
+                  )}
+              </View>
+          </View>
         </View>
-      </View>
+
+        {/* Account Actions Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Account</Text>
+          
+          <View style={[styles.infoCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+              
+              <TouchableOpacity style={styles.menuItem} onPress={handleDeactivate}>
+                  <View style={styles.menuItemLeft}>
+                      <Ionicons name="trash-outline" size={22} color={theme.textPrimary} />
+                      <Text style={[styles.menuItemText, { color: theme.textPrimary }]}>Deactivate Account</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+              </TouchableOpacity>
+
+              <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
+
+              <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+                  <View style={styles.menuItemLeft}>
+                      <Ionicons name="log-out-outline" size={22} color={palette.error} />
+                      <Text style={[styles.menuItemText, { color: palette.error }]}>Log Out</Text>
+                  </View>
+              </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
 
       {/* --- DEACTIVATION CONFIRMATION MODAL --- */}
       <Modal
@@ -468,7 +494,7 @@ export default function Profile() {
         onClose={closeFeedback}
       />
 
-    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

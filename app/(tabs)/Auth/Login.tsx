@@ -88,7 +88,18 @@ export default function Login() {
       };
 
       await login(userData, access, refresh);
-      navigation.navigate('Tabs', { screen: 'FeedTab' });
+
+      showFeedback(
+        'Successful Login!',
+        'Welcome to our App.',
+        'success',
+        [{
+          label: 'OK',
+          onPress: () => {
+            navigation.navigate('Tabs', { screen: 'FeedTab' });
+          },
+        }]
+      );
 
     } catch (error: any) {
       console.error('Login Error:', error);
@@ -108,7 +119,7 @@ export default function Login() {
           <View style={styles.logoContainer}>
             <Image source={require('../../../assets/images/Logo2.jpg')} style={styles.logoImage} resizeMode="contain" />
             <Text style={[styles.title, { color: theme.accentText }]}>Welcome Back!</Text>
-            <Text style={[styles.subtitle, { color: theme.textMuted }]}>Log in to your account</Text>
+            <Text numberOfLines={1} style={[styles.subtitle, { color: theme.textMuted }]}>Log in to your account</Text>
           </View>
 
           <View style={styles.formContainer}>
@@ -140,7 +151,7 @@ export default function Login() {
             </View>
 
             <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation.navigate('ForgotPassword')}>
-              <Text style={{ color: theme.accent, ...typography.labelSm }}>Forgot Password?</Text>
+              <Text numberOfLines={1} style={{ color: theme.accent, ...typography.labelSm }}>Forgot Password?</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -159,7 +170,7 @@ export default function Login() {
             <View style={styles.signupContainer}>
               <Text style={[styles.signupText, { color: theme.textMuted }]}>Don't have an account? </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-                <Text style={[styles.signupLink, { color: theme.accent }]}>Sign Up</Text>
+                <Text numberOfLines={1} style={[styles.signupLink, { color: theme.accent }]}>Sign Up</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -202,5 +213,5 @@ const styles = StyleSheet.create({
   loginButtonText: { color: '#FFF', ...typography.labelLg },
   signupContainer: { flexDirection: 'row', justifyContent: 'center' },
   signupText: { ...typography.bodySm },
-  signupLink: { ...typography.labelSm },
+  signupLink: { ...typography.labelSm, paddingTop: spacing.xxs },
 });

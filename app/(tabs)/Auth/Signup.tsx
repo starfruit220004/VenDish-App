@@ -137,7 +137,7 @@ export default function Signup() {
                 style={styles.logoImage}
                 resizeMode="contain"
               />
-              <Text style={[styles.title, { color: theme.accentText }]}>Create Account</Text>
+              <Text numberOfLines={1} style={[styles.title, { color: theme.accentText }]}>Create Account</Text>
               <Text style={[styles.subtitle, { color: theme.textMuted }]}>Sign up to get started</Text>
             </View>
 
@@ -203,7 +203,7 @@ export default function Signup() {
                 disabled={isLoading}
                 activeOpacity={0.85}
               >
-                <Text style={styles.signupButtonText}>{isLoading ? 'Creating Account...' : 'Sign Up'}</Text>
+                <Text numberOfLines={1} style={styles.signupButtonText}>{isLoading ? 'Creating Account...' : 'Sign Up'}</Text>
               </TouchableOpacity>
 
               <View style={styles.loginContainer}>
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: layout.screenPadding, justifyContent: 'center', minHeight: '100%' },
   logoContainer: { alignItems: 'center', marginBottom: spacing['3xl'] },
   logoImage: { width: 120, height: 120, marginBottom: spacing.xl, borderRadius: radii.full },
-  title: { ...typography.displaySm, marginBottom: spacing.xs },
+  title: { ...typography.displayMd, marginBottom: spacing.xs },
   subtitle: { ...typography.bodyMd },
   formContainer: { width: '100%', paddingBottom: spacing['4xl'] },
   inputContainer: {
@@ -251,5 +251,5 @@ const styles = StyleSheet.create({
   signupButtonText: { color: '#FFF', ...typography.labelLg },
   loginContainer: { flexDirection: 'row', justifyContent: 'center' },
   loginText: { ...typography.bodySm },
-  loginLink: { ...typography.labelSm },
+  loginLink: { ...typography.labelSm, paddingTop: spacing.xxs },
 });

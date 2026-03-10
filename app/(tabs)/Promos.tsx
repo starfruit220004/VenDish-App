@@ -211,9 +211,26 @@ export default function Promos() {
     return date.toLocaleDateString('en-US', options);
   };
 
-  const formatRate = (rate: string) => {
-    if (rate === 'FREE') return 'FREE ITEM';
-    return `${rate} OFF`;
+  const formatRate = (rate: any) => {
+    if (!rate) return '';
+
+    const str = String(rate).trim();
+
+    if (str.toUpperCase() === 'FREE') return 'FREE ITEM';
+
+    // Fixed amount (e.g. "₱50" or "₱50.00")
+    if (str.includes('₱')) {
+      const num = parseFloat(str.replace(/[^0-9.]/g, ''));
+      return !isNaN(num) ? `₱${Math.trunc(num)} OFF` : `${str} OFF`;
+    }
+
+    // Percentage (e.g. "30%", "30.00%", or just "30")
+    const num = parseFloat(str.replace(/[^0-9.]/g, ''));
+    if (!isNaN(num)) {
+      return `${Math.trunc(num)}% OFF`;
+    }
+
+    return `${str} OFF`;
   };
 
   if (loading) {
@@ -234,7 +251,7 @@ export default function Promos() {
       }
     >
       <View style={styles.headerContainer}>
-        <Text style={[styles.header, { color: theme.accentText }]}>
+        <Text numberOfLines={1} style={[styles.header, { color: theme.accentText }]}>
           Available Promos
         </Text>
         <Text style={[styles.subheader, { color: theme.textMuted }]}>
@@ -292,7 +309,7 @@ export default function Promos() {
                 styles.discountBadge,
                 { backgroundColor: isExpired ? theme.textMuted : theme.accent },
               ]}>
-                <Text style={styles.discountText}>
+                <Text numberOfLines={1} style={styles.discountText}>
                   {isExpired ? 'EXPIRED' : formatRate(promo.rate)}
                 </Text>
               </View>
@@ -317,7 +334,7 @@ export default function Promos() {
                   </View>
                   <View style={styles.detailRow}>
                     <Ionicons name="time-outline" size={15} color={theme.textMuted} />
-                    <Text style={[styles.expiryText, { color: theme.textMuted }]}>
+                    <Text numberOfLines={1} style={[styles.expiryText, { color: theme.textMuted }]}>
                       {isExpired ? 'Expired on: ' : 'Expires: '}{formatDate(promo.expiration)}
                     </Text>
                   </View>
@@ -332,7 +349,7 @@ export default function Promos() {
                   activeOpacity={0.85}
                   disabled={isUnavailable}
                 >
-                  <Text style={styles.claimButtonText}>{buttonText}</Text>
+                  <Text numberOfLines={1} style={styles.claimButtonText}>{buttonText}</Text>
                   <Ionicons name={iconName} size={18} color="#FFF" />
                 </TouchableOpacity>
               </View>
@@ -448,7 +465,7 @@ const styles = StyleSheet.create({
   // ── Header ──────────────────────────────────────────
   headerContainer: { marginBottom: spacing['2xl'], alignItems: 'center' },
   header: { ...typography.displaySm, marginBottom: spacing.xs, textAlign: 'center' },
-  subheader: { ...typography.bodyMd, textAlign: 'center', paddingHorizontal: spacing.xl },
+  subheader: { ...typography.bodyMd, textAlign: 'center', paddingHorizontal: spacing.md },
 
   // ── Promo Card ──────────────────────────────────────
   promoCard: {
