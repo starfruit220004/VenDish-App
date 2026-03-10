@@ -115,7 +115,7 @@ export default function Profile() {
       }
 
       const response = await api.patch('/firstapp/users/me/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': undefined },
       });
 
       const backendUser = response.data;
@@ -306,7 +306,7 @@ export default function Profile() {
                       <Ionicons name="mail-outline" size={20} color={theme.accent} />
                       <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Email</Text>
                   </View>
-                  <Text style={[styles.infoValue, { color: theme.textPrimary }]}>{userData?.email || 'N/A'}</Text>
+                  <Text numberOfLines={1} style={[styles.infoValue, { color: theme.textPrimary }]}>{userData?.email || 'N/A'}</Text>
               </View>
 
               <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
@@ -316,7 +316,7 @@ export default function Profile() {
                       <Ionicons name="person-outline" size={20} color={theme.accent} />
                       <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Full Name</Text>
                   </View>
-                  <Text style={[styles.infoValue, { color: theme.textPrimary }]}>
+                  <Text numberOfLines={1} style={[styles.infoValue, { color: theme.textPrimary }]}>
                       {userData?.firstname} {userData?.middlename ? userData.middlename + '. ' : ''}{userData?.lastname}
                   </Text>
               </View>
@@ -518,10 +518,10 @@ const styles = StyleSheet.create({
   sectionTitle: { ...typography.caption, fontWeight: '600' as const, marginBottom: spacing.md, textTransform: 'uppercase' as const, letterSpacing: 1 },
   infoCard: { borderRadius: radii.xl, padding: spacing.xxs },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.lg },
-  infoLabelContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  infoLabelContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexShrink: 0 },
   infoLabel: { ...typography.bodyMd },
-  infoValue: { ...typography.bodyMd, fontWeight: '500' as const },
-  editInput: { ...typography.bodySm, fontWeight: '500' as const, borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, minWidth: 140, textAlign: 'right' },
+  infoValue: { ...typography.bodyMd, fontWeight: '500' as const, flex: 1, textAlign: 'right' as const },
+  editInput: { ...typography.bodySm, fontWeight: '500' as const, borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, flex: 1, minWidth: 120, textAlign: 'right' },
   divider: { height: 1, marginHorizontal: spacing.lg },
   menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.lg },
   menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md},

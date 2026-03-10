@@ -201,11 +201,15 @@ export default function FoodDetail({ route, navigation }: any) {
                   <View key={review.id} style={[styles.reviewCard, { borderColor: theme.border }]}>
                     <View style={styles.reviewHeader}>
                       <View style={styles.reviewAuthor}>
-                        <View style={[styles.reviewAvatar, { backgroundColor: theme.accentSoft }]}>
-                          <Text style={[styles.reviewAvatarText, { color: theme.accent }]}>
-                            {review.username.charAt(0).toUpperCase()}
-                          </Text>
-                        </View>
+                        {review.profilePic ? (
+                          <Image source={{ uri: review.profilePic }} style={styles.reviewAvatar} />
+                        ) : (
+                          <View style={[styles.reviewAvatarFallback, { backgroundColor: theme.accentSoft }]}>
+                            <Text style={[styles.reviewAvatarText, { color: theme.accent }]}>
+                              {review.username.charAt(0).toUpperCase()}
+                            </Text>
+                          </View>
+                        )}
                         <View>
                           <Text style={[styles.reviewUsername, { color: theme.textPrimary }]}>
                             {review.username}
@@ -441,6 +445,12 @@ const styles = StyleSheet.create({
   },
   reviewAuthor: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   reviewAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.full,
+    marginRight: spacing.md,
+  },
+  reviewAvatarFallback: {
     width: 36,
     height: 36,
     borderRadius: radii.full,

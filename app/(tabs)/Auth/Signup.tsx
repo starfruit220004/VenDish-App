@@ -66,6 +66,13 @@ export default function Signup() {
       return;
     }
 
+    // Email format validation — must be a valid email with a proper domain (e.g. .com, .org)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!emailRegex.test(email.trim())) {
+      showFeedback('Error', 'Please enter a valid email address (e.g. name@example.com).', 'error');
+      return;
+    }
+
     if (password !== confirmPassword) {
       showFeedback('Error', 'Passwords do not match.', 'error');
       return;

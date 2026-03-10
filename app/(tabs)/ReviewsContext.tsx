@@ -6,6 +6,7 @@ export interface FoodReview {
   id: string;
   foodId: number;
   username: string;
+  profilePic?: string;
   rating: number;
   review: string;
   media?: string;
@@ -15,6 +16,7 @@ export interface FoodReview {
 export interface ShopReview {
   id: string;
   username: string;
+  profilePic?: string;
   rating: number;
   review: string;
   media?: string;
@@ -71,6 +73,7 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
         .map((r: any) => ({
           id: r.id.toString(),
           username: r.username || 'Anonymous',
+          profilePic: r.profile_pic || undefined,
           rating: r.rating,
           review: r.comment, // Map 'comment' to 'review'
           media: r.image,    // Map 'image' to 'media'
@@ -84,6 +87,7 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
           id: r.id.toString(),
           foodId: r.product, // The product ID
           username: r.username || 'Anonymous',
+          profilePic: r.profile_pic || undefined,
           rating: r.rating,
           review: r.comment,
           media: r.image,
@@ -123,7 +127,7 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
       }
 
       await api.post('/firstapp/reviews/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': undefined },
       });
 
       // Refresh list after posting
@@ -153,7 +157,7 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
       }
 
       await api.post('/firstapp/reviews/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': undefined },
       });
 
       await loadReviews();
