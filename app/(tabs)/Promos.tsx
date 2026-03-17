@@ -275,7 +275,14 @@ export default function Promos() {
           const isRedeemed = status === 'redeemed';
           const isExpired = status === 'expired';
           const isClaimed = status === 'claimed' || isLocallyClaimed;
-          const isUnavailable = isRedeemed || isClaimed || isExpired;
+          
+          // +++ NEW: Check if global claims have reached the limit +++
+          const isFullyClaimedGlobal = 
+            promo.claim_limit != null && 
+            (promo.times_claimed ?? 0) >= promo.claim_limit;
+
+          // +++ UPDATE: Add isFullyClaimedGlobal to the unavailable check +++
+          const isUnavailable = isRedeemed || isClaimed || isExpired || isFullyClaimedGlobal;
 
           let buttonText = 'Claim Now';
           let iconName: keyof typeof Ionicons.glyphMap = 'checkmark-circle-outline';
@@ -283,6 +290,8 @@ export default function Promos() {
           if (isExpired) { buttonText = 'Expired'; iconName = 'time-sharp'; }
           else if (isRedeemed) { buttonText = 'Redeemed'; iconName = 'checkmark-circle-sharp'; }
           else if (isClaimed) { buttonText = 'Claimed'; iconName = 'checkmark-circle-sharp'; }
+          // +++ NEW: Fully Claimed button state +++
+          else if (isFullyClaimedGlobal) { buttonText = 'Fully Claimed'; iconName = 'people-circle-outline'; }
           else if (!isLoggedIn) { buttonText = 'Login to Claim'; iconName = 'lock-closed'; }
 
           return (
@@ -388,7 +397,6 @@ export default function Promos() {
         </View>
       )}
       
-      {/* ... Modals (keep existing modals) ... */}
       <Modal visible={authModalVisible} transparent animationType="fade">
         <View style={[styles.modalOverlay, { backgroundColor: theme.modalOverlay }]}>
           <View style={[styles.modalBox, { backgroundColor: theme.surface }, theme.cardShadowHeavy]}>
@@ -430,7 +438,7 @@ export default function Promos() {
               <Text style={{ fontWeight: '700', color: theme.textPrimary }}>{selectedPromo?.product_name}</Text>{'\n'}
               ({selectedPromo?.name})
             </Text>
-            <Text style={[styles.modalText, { color: theme.textMuted }]}>Code: {selectedPromo?.code}</Text>
+            {/* <Text style={[styles.modalText, { color: theme.textMuted }]}>Code: {selectedPromo?.code}</Text> */}
             <TouchableOpacity
               style={[styles.modalButton, { backgroundColor: theme.accent }]}
               onPress={() => setClaimModalVisible(false)}

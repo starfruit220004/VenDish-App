@@ -26,6 +26,8 @@ export interface Coupon {
   criteria_details?: any;
   is_used?: boolean;
   valid_to?: string;
+  claim_limit?: number | null;
+  times_claimed?: number;
 }
 
 export interface UserData {

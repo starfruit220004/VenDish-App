@@ -33,7 +33,12 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [editPhone, setEditPhone] = useState(userData?.phone || '');
   const [editAddress, setEditAddress] = useState(userData?.address || '');
-  const [editProfilePic, setEditProfilePic] = useState<string | null>(null); // local URI of newly picked image
+  const [editEmail, setEditEmail] = useState(userData?.email || '');
+  const [editUsername, setEditUsername] = useState(userData?.username || '');
+  const [editFirstname, setEditFirstname] = useState(userData?.firstname || '');
+  const [editMiddlename, setEditMiddlename] = useState(userData?.middlename || '');
+  const [editLastname, setEditLastname] = useState(userData?.lastname || '');
+  const [editProfilePic, setEditProfilePic] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Modal State
@@ -70,6 +75,11 @@ export default function Profile() {
   const startEditing = () => {
     setEditPhone(userData?.phone || '');
     setEditAddress(userData?.address || '');
+    setEditEmail(userData?.email || '');
+    setEditUsername(userData?.username || '');
+    setEditFirstname(userData?.firstname || '');
+    setEditMiddlename(userData?.middlename || '');
+    setEditLastname(userData?.lastname || '');
     setEditProfilePic(null);
     setIsEditing(true);
   };
@@ -103,11 +113,23 @@ export default function Profile() {
     try {
       let response;
 
+      const payload = {
+        phone: editPhone.trim(),
+        address: editAddress.trim(),
+        email: editEmail.trim(),
+        username: editUsername.trim(),
+        firstname: editFirstname.trim(),
+        middlename: editMiddlename.trim(),
+        lastname: editLastname.trim(),
+      };
+
       if (editProfilePic) {
         // Image upload → must use FormData + multipart
         const formData = new FormData();
-        formData.append('phone', editPhone.trim());
-        formData.append('address', editAddress.trim());
+        Object.entries(payload).forEach(([key, value]) => {
+            formData.append(key, value);
+        });
+        
         // @ts-ignore – React Native FormData accepts this shape
         formData.append('profile_pic', {
           uri: editProfilePic,
@@ -120,11 +142,8 @@ export default function Profile() {
           transformRequest: (data: any) => data,
         });
       } else {
-        // Text-only update → plain JSON (no FormData needed)
-        response = await api.patch('/firstapp/users/me/', {
-          phone: editPhone.trim(),
-          address: editAddress.trim(),
-        });
+        // Text-only update → plain JSON
+        response = await api.patch('/firstapp/users/me/', payload);
       }
 
       const backendUser = response.data;
@@ -134,6 +153,11 @@ export default function Profile() {
         ...userData!,
         phone: backendUser.phone || '',
         address: backendUser.address || '',
+        email: backendUser.email || '',
+        username: backendUser.username || '',
+        firstname: backendUser.firstname || '',
+        middlename: backendUser.middlename || '',
+        lastname: backendUser.lastname || '',
         profilePic: backendUser.profile_pic || '',
       });
 
@@ -168,8 +192,6 @@ export default function Profile() {
           style: 'danger', 
           onPress: async () => { 
             await logout(); 
-            
-            // Show the success modal reusing the existing FeedbackModal
             showFeedback(
               'Success',
               'You successfully logout.',
@@ -177,7 +199,6 @@ export default function Profile() {
               [{
                 label: 'OK',
                 onPress: () => {
-                  // Navigate to the Promos tab after acknowledging the modal
                   (navigation as any).reset({
                     index: 0,
                     routes: [{ 
@@ -195,7 +216,6 @@ export default function Profile() {
   };
 
   const handleDeactivate = () => {
-    // Open the deactivation confirmation modal
     setDeactivateModalVisible(true);
     setPassword('');
   };
@@ -208,10 +228,7 @@ export default function Profile() {
 
     setIsLoading(true);
     try {
-      // Token is auto-attached by the API interceptor
       await deactivateAccount(password);
-
-      // Close modal
       setDeactivateModalVisible(false);
       setPassword('');
 
@@ -281,9 +298,23 @@ export default function Profile() {
           <Text numberOfLines={1} style={[styles.name, { color: theme.textPrimary }]}>
               {userData?.firstname} {userData?.middlename ? userData.middlename + ' ' : ''}{userData?.lastname}
           </Text>
-          <Text numberOfLines={1} style={[styles.username, { color: theme.textSecondary }]}>
-              @{userData?.username || 'user'}
-          </Text>
+          
+          {isEditing ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
+              <Text style={[styles.username, { color: theme.textSecondary, marginRight: 2 }]}>@</Text>
+              <TextInput
+                style={[styles.editInput, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated, minWidth: 150, textAlign: 'center', paddingVertical: 4 }]}
+                value={editUsername}
+                onChangeText={setEditUsername}
+                placeholder="username"
+                autoCapitalize="none"
+              />
+            </View>
+          ) : (
+            <Text numberOfLines={1} style={[styles.username, { color: theme.textSecondary }]}>
+                @{userData?.username || 'user'}
+            </Text>
+          )}
         </View>
 
         {/* Info Section */}
@@ -318,24 +349,64 @@ export default function Profile() {
           </View>
           
           <View style={[styles.infoCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+              {/* Email */}
               <View style={styles.infoRow}>
                   <View style={styles.infoLabelContainer}>
                       <Ionicons name="mail-outline" size={20} color={theme.accent} />
                       <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Email</Text>
                   </View>
-                  <Text numberOfLines={1} style={[styles.infoValue, { color: theme.textPrimary }]}>{userData?.email || 'N/A'}</Text>
+                  {isEditing ? (
+                    <TextInput
+                      style={[styles.editInput, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
+                      value={editEmail}
+                      onChangeText={setEditEmail}
+                      placeholder="Enter email"
+                      placeholderTextColor={theme.textDisabled}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  ) : (
+                    <Text numberOfLines={1} style={[styles.infoValue, { color: theme.textPrimary }]}>{userData?.email || 'N/A'}</Text>
+                  )}
               </View>
 
               <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
 
-              <View style={styles.infoRow}>
+              {/* Full Name */}
+              <View style={[styles.infoRow, isEditing && {flexDirection: 'column', alignItems: 'flex-start', gap: spacing.sm}]}>
                    <View style={styles.infoLabelContainer}>
                       <Ionicons name="person-outline" size={20} color={theme.accent} />
                       <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Full Name</Text>
                   </View>
-                  <Text numberOfLines={1} style={[styles.infoValue, { color: theme.textPrimary }]}>
-                      {userData?.firstname} {userData?.middlename ? userData.middlename + '. ' : ''}{userData?.lastname}
-                  </Text>
+                  {isEditing ? (
+                    <View style={{width: '100%', gap: spacing.sm, paddingLeft: 28}}>
+                      <TextInput 
+                        style={[styles.editInputWide, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]} 
+                        value={editFirstname} 
+                        onChangeText={setEditFirstname} 
+                        placeholder="First Name" 
+                        placeholderTextColor={theme.textDisabled}
+                      />
+                      <TextInput 
+                        style={[styles.editInputWide, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]} 
+                        value={editMiddlename} 
+                        onChangeText={setEditMiddlename} 
+                        placeholder="Middle Name (Optional)" 
+                        placeholderTextColor={theme.textDisabled}
+                      />
+                      <TextInput 
+                        style={[styles.editInputWide, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]} 
+                        value={editLastname} 
+                        onChangeText={setEditLastname} 
+                        placeholder="Last Name" 
+                        placeholderTextColor={theme.textDisabled}
+                      />
+                    </View>
+                  ) : (
+                    <Text numberOfLines={1} style={[styles.infoValue, { color: theme.textPrimary }]}>
+                        {userData?.firstname} {userData?.middlename ? userData.middlename + '. ' : ''}{userData?.lastname}
+                    </Text>
+                  )}
               </View>
 
               <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
@@ -364,7 +435,7 @@ export default function Profile() {
 
               <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
 
-              {/* Address - UPDATED LAYOUT */}
+              {/* Address */}
               <View style={[styles.infoRow, { flexDirection: 'column', alignItems: 'flex-start', gap: spacing.sm }]}>
                   <View style={styles.infoLabelContainer}>
                       <Ionicons name="location-outline" size={20} color={theme.accent} />
@@ -372,28 +443,25 @@ export default function Profile() {
                   </View>
                   {isEditing ? (
                     <TextInput
-                      style={[styles.editInput, { 
+                      style={[styles.editInputWide, { 
                         color: theme.textPrimary, 
                         borderColor: theme.border, 
                         backgroundColor: theme.surfaceElevated,
-                        width: '100%',
-                        textAlign: 'left',
                         minHeight: 70,
-                        paddingTop: spacing.sm
+                        textAlignVertical: 'top'
                       }]}
                       value={editAddress}
                       onChangeText={setEditAddress}
                       placeholder="Unit/House No./Street Name/Barangay/City/Zip Code"
                       placeholderTextColor={theme.textDisabled}
                       multiline
-                      textAlignVertical="top"
                     />
                   ) : (
                     <Text style={[styles.infoValue, { 
                       color: userData?.address ? theme.textPrimary : theme.textDisabled, 
                       textAlign: 'left',
                       width: '100%',
-                      paddingLeft: 28 // Indents slightly to align with text above, bypassing the icon
+                      paddingLeft: 28 
                     }]}>
                       {userData?.address || 'Not set'}
                     </Text>
@@ -539,6 +607,7 @@ const styles = StyleSheet.create({
   infoLabel: { ...typography.bodyMd },
   infoValue: { ...typography.bodyMd, fontWeight: '500' as const, flex: 1, textAlign: 'right' as const },
   editInput: { ...typography.bodySm, fontWeight: '500' as const, borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, flex: 1, minWidth: 120, textAlign: 'right' },
+  editInputWide: { ...typography.bodySm, fontWeight: '500' as const, borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, width: '100%', textAlign: 'left' },
   divider: { height: 1, marginHorizontal: spacing.lg },
   menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.lg },
   menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md},
