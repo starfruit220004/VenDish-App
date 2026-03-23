@@ -12,7 +12,7 @@ const BASE_URL = (() => {
   if (!ENV_BASE_URL) return PRODUCTION_BASE_URL;
 
   const normalized = ENV_BASE_URL.replace(/\/+$/, '');
-  if (normalized.includes('ngrok-free.dev')) return PRODUCTION_BASE_URL;
+  // if (normalized.includes('ngrok-free.dev')) return PRODUCTION_BASE_URL;
 
   return normalized;
 })();

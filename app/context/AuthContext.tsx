@@ -61,6 +61,11 @@ export interface AuthContextType {
   markAsRedeemed: (id: number) => Promise<void>;
   fetchMyCoupons: (showSpinner?: boolean) => Promise<void>;
   isCouponRefreshing: boolean;
+
+  // --- NEW FOR NOTIFICATION BADGE ---
+  unreadPromoCount: number;
+  fetchUnreadPromoCount: () => Promise<void>;
+  decrementUnreadCount: () => void;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -78,6 +83,11 @@ export const AuthContext = createContext<AuthContextType>({
   markAsRedeemed: async () => {},
   fetchMyCoupons: async () => {},
   isCouponRefreshing: false,
+  
+  // --- NEW FOR NOTIFICATION BADGE ---
+  unreadPromoCount: 0,
+  fetchUnreadPromoCount: async () => {},
+  decrementUnreadCount: () => {},
 });
 
 // ─── Custom Hook ─────────────────────────────────────────────────────────────
@@ -97,6 +107,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [claimedCoupons, setClaimedCoupons] = useState<Coupon[]>([]);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isCouponRefreshing, setIsCouponRefreshing] = useState(false);
+  
+  // --- NEW STATE: Notification Badge ---
+  const [unreadPromoCount, setUnreadPromoCount] = useState(0);
+
+  // --- NEW LOGIC: Fetch Unread Promo Count ---
+  const fetchUnreadPromoCount = useCallback(async () => {
+    if (!isLoggedIn) return;
+    try {
+      const response = await api.get('/firstapp/notifications/');
+      const promos = response.data.filter((n: any) => n.category === 'PROMO' && !n.is_read);
+      setUnreadPromoCount(promos.length);
+    } catch (error) {
+      console.log('Failed to fetch unread count', error);
+    }
+  }, [isLoggedIn]);
+
+  // --- NEW LOGIC: Decrement Badge Count ---
+  const decrementUnreadCount = useCallback(() => {
+    setUnreadPromoCount(prev => Math.max(0, prev - 1));
+  }, []);
 
   // ── Fetch user's coupons from the API ──────────────────────────────────────
   const fetchMyCoupons = useCallback(async (showSpinner = false) => {
@@ -116,7 +146,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await AsyncStorage.setItem(STORAGE_KEYS.COUPON_WALLET, JSON.stringify(coupons));
     } catch (error: any) {
       console.error('Failed to fetch coupons:', error);
-      // 401s are handled by the API interceptor (auto-refresh or logout).
     } finally {
       if (showSpinner) setIsCouponRefreshing(false);
     }
@@ -151,12 +180,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loadAuthData();
   }, []);
 
-  // ── Fetch fresh coupons once authenticated ────────────────────────────────
+  // ── Fetch fresh coupons AND Notifications once authenticated ────────────────
   useEffect(() => {
     if (isLoggedIn && !isAuthLoading) {
       fetchMyCoupons();
+      fetchUnreadPromoCount(); // <-- Calls badge count on login/load
     }
-  }, [isLoggedIn, isAuthLoading, fetchMyCoupons]);
+  }, [isLoggedIn, isAuthLoading, fetchMyCoupons, fetchUnreadPromoCount]);
 
   // ── Register API interceptor logout handler ────────────────────────────────
   useEffect(() => {
@@ -165,6 +195,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserData(null);
       setUserToken(null);
       setClaimedCoupons([]);
+      setUnreadPromoCount(0);
     });
     return () => setLogoutHandler(null);
   }, []);
@@ -180,7 +211,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserData(user);
       setUserToken(access);
       setIsLoggedIn(true);
-      // Coupons fetched automatically by the useEffect that watches isLoggedIn
     } catch (error) {
       console.error('Login storage error:', error);
     }
@@ -199,6 +229,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserData(null);
       setUserToken(null);
       setClaimedCoupons([]);
+      setUnreadPromoCount(0); // clear on manual logout
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -252,6 +283,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         markAsRedeemed,
         fetchMyCoupons,
         isCouponRefreshing,
+        // --- NEW ---
+        unreadPromoCount,
+        fetchUnreadPromoCount,
+        decrementUnreadCount,
       }}
     >
       {children}

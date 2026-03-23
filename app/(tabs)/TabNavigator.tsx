@@ -1,15 +1,18 @@
 import React from 'react';
-import { Platform, useColorScheme, View } from 'react-native';
+import { Platform, useColorScheme, View, Text } from 'react-native'; // <-- Added Text
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import Promos from './Promos';
 import FeedTab from './FeedTab';
+import Notifications from './Notifications';
 import FavoritesTab from './FavoritesTab';
 import LocationTab from './LocationTab';
 import ShopReviewsTab from './ShopReviewsTab';
 import { getTheme, layout, spacing, typography } from '../../constants/theme';
+import { useAuth } from '../context/AuthContext'; // <-- Added useAuth import
 
 type TabParamList = {
+  Notification: undefined;
   Promos: undefined;
   Feed: undefined;
   Favorites: undefined;
@@ -19,27 +22,61 @@ type TabParamList = {
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
-/** Pill-shaped active indicator behind the icon */
-function TabIcon({ name, color, focused }: { name: keyof typeof Ionicons.glyphMap; color: string; focused: boolean }) {
+/** Pill-shaped active indicator behind the icon with Badge support */
+function TabIcon({ 
+    name, 
+    color, 
+    focused, 
+    badgeCount = 0 
+}: { 
+    name: keyof typeof Ionicons.glyphMap; 
+    color: string; 
+    focused: boolean;
+    badgeCount?: number;
+}) {
   const scheme = useColorScheme();
   const theme = getTheme(scheme === 'dark');
 
   return (
-    <View
-      style={[
-        {
-          alignItems: 'center',
+    <View style={{ width: 44, height: 32, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={[
+          {
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 44,
+            height: 32,
+            borderRadius: 16,
+          },
+          focused && {
+            backgroundColor: theme.accentSoft,
+          },
+        ]}
+      >
+        <Ionicons name={name} size={22} color={color} />
+      </View>
+
+      {/* --- RED NOTIFICATION BADGE --- */}
+      {badgeCount > 0 && (
+        <View style={{
+          position: 'absolute',
+          top: -2,
+          right: 2,
+          backgroundColor: '#EF4444', // Tailwind Red-500
+          borderRadius: 10,
+          minWidth: 18,
+          height: 18,
           justifyContent: 'center',
-          width: 44,
-          height: 32,
-          borderRadius: 16,
-        },
-        focused && {
-          backgroundColor: theme.accentSoft,
-        },
-      ]}
-    >
-      <Ionicons name={name} size={22} color={color} />
+          alignItems: 'center',
+          borderWidth: 1.5,
+          borderColor: theme.tabBarBg,
+          paddingHorizontal: 3,
+        }}>
+          <Text style={{ color: '#FFF', fontSize: 10, fontWeight: 'bold' }}>
+            {badgeCount > 99 ? '99+' : badgeCount}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -48,6 +85,9 @@ export default function TabNavigator() {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const theme = getTheme(isDark);
+  
+  // <-- Grab the unread count from context
+  const { unreadPromoCount } = useAuth(); 
 
   return (
     <Tab.Navigator
@@ -72,6 +112,22 @@ export default function TabNavigator() {
         headerShown: false,
       }}
     >
+      <Tab.Screen
+        name="Notification"
+        component={Notifications}
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon 
+              name="notifications-circle-outline" 
+              color={color} 
+              focused={focused} 
+              badgeCount={unreadPromoCount} // <-- Pass the counter here
+            />
+          ),
+          tabBarLabel: 'Notifications',
+        }}
+      />
+
       <Tab.Screen
         name="Promos"
         component={Promos}
