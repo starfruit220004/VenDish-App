@@ -5,7 +5,43 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
-const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL || 'https://vendish-food-business-sales-optimzation.onrender.com';
+const PRODUCTION_BASE_URL = 'https://vendish-food-business-sales-optimzation.onrender.com';
+const ENV_BASE_URL = process.env.EXPO_PUBLIC_BASE_URL?.trim();
+
+const BASE_URL = (() => {
+  if (!ENV_BASE_URL) return PRODUCTION_BASE_URL;
+
+  const normalized = ENV_BASE_URL.replace(/\/+$/, '');
+  if (normalized.includes('ngrok-free.dev')) return PRODUCTION_BASE_URL;
+
+  return normalized;
+})();
+
+const PUBLIC_PATH_PREFIXES = [
+  '/firstapp/products/',
+  '/firstapp/categories/',
+  '/firstapp/coupons/',
+  '/firstapp/contact-page/',
+  '/firstapp/about/',
+  '/firstapp/services-page/',
+  '/firstapp/home/',
+  '/firstapp/reviews/',
+  '/request-otp/',
+  '/verify-otp/',
+  '/change-password-token/',
+  '/firstapp/token/',
+  '/firstapp/token/refresh/',
+];
+
+const isPublicPath = (url = '') => {
+  if (!url) return false;
+
+  const pathOnly = url.startsWith('http')
+    ? `/${url.split('/').slice(3).join('/')}`
+    : url;
+
+  return PUBLIC_PATH_PREFIXES.some((prefix) => pathOnly.startsWith(prefix));
+};
 
 // ─── Logout handler registration ─────────────────────────────────────────────
 // AuthProvider registers a callback so the interceptor can reset React state
@@ -48,15 +84,20 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'ngrok-skip-browser-warning': '69420',
   },
+  timeout: 20000,
 });
 
 // 1. REQUEST INTERCEPTOR — attach the access token to every outgoing request
 api.interceptors.request.use(
   async (config) => {
     try {
-      const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      const publicEndpoint = isPublicPath(config.url);
+
+      if (!publicEndpoint) {
+        const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
       }
     } catch (error) {
       console.error('Error retrieving access token:', error);
