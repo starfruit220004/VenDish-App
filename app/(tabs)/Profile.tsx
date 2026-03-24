@@ -303,7 +303,10 @@ export default function Profile() {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
               <Text style={[styles.username, { color: theme.textSecondary, marginRight: 2 }]}>@</Text>
               <TextInput
-                style={[styles.editInput, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated, minWidth: 150, textAlign: 'center', paddingVertical: 4 }]}
+                style={[
+                  styles.editUsernameInput, 
+                  { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }
+                ]}
                 value={editUsername}
                 onChangeText={setEditUsername}
                 placeholder="username"
@@ -606,7 +609,32 @@ const styles = StyleSheet.create({
   infoLabelContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexShrink: 0 },
   infoLabel: { ...typography.bodyMd },
   infoValue: { ...typography.bodyMd, fontWeight: '500' as const, flex: 1, textAlign: 'right' as const },
-  editInput: { ...typography.bodySm, fontWeight: '500' as const, borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, flex: 1, minWidth: 120, textAlign: 'right' },
+  
+  // FIX: Specifically bounded input for the header Username
+  editUsernameInput: {
+    ...typography.bodySm,
+    fontWeight: '500' as const,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    minWidth: 150,
+    maxWidth: 200, // Prevents it from stretching to the screen edges
+    textAlign: 'center'
+  },
+
+  // FIX: Changed from flex: 1 to width: '60%' to prevent it from squishing the label
+  editInput: { 
+    ...typography.bodySm, 
+    fontWeight: '500' as const, 
+    borderWidth: 1, 
+    borderRadius: radii.md, 
+    paddingHorizontal: spacing.md, 
+    paddingVertical: spacing.xs, 
+    width: '60%', 
+    textAlign: 'right' 
+  },
+
   editInputWide: { ...typography.bodySm, fontWeight: '500' as const, borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, width: '100%', textAlign: 'left' },
   divider: { height: 1, marginHorizontal: spacing.lg },
   menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.lg },

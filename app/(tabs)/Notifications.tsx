@@ -92,7 +92,7 @@ export default function Notifications() {
     return (
       <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
         <Ionicons name="notifications-off-outline" size={64} color={theme.textDisabled} />
-        <Text style={[styles.emptyTitle, { color: theme.textSecondary, marginTop: spacing.md }]}>Login Required</Text>
+        <Text numberOfLines={1} style={[styles.emptyTitle, { color: theme.textSecondary, marginTop: spacing.md }]}>Login Required</Text>
         <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>Please login to view promo notifications.</Text>
       </View>
     );

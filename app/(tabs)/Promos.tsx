@@ -373,7 +373,7 @@ export default function Promos() {
             <Ionicons name="lock-closed" size={24} color={theme.accent} />
           </View>
           <View style={styles.infoBannerText}>
-            <Text style={[styles.infoBannerTitle, { color: theme.accentText }]}>
+            <Text numberOfLines={1} style={[styles.infoBannerTitle, { color: theme.accentText }]}>
               Account Required
             </Text>
             <Text style={[styles.infoBannerDesc, { color: theme.textMuted }]}>
@@ -391,7 +391,7 @@ export default function Promos() {
               style={[styles.signupBannerButton, { backgroundColor: theme.accent }]}
               onPress={() => navigation.navigate('Signup', {})}
             >
-              <Text style={styles.signupBannerButtonText}>Sign Up</Text>
+              <Text numberOfLines={1} style={styles.signupBannerButtonText}>Sign Up</Text>
             </TouchableOpacity>
           </View>
         </View>

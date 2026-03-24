@@ -162,11 +162,9 @@ export default function MainDrawer() {
   const isDark = scheme === 'dark';
   const theme = getTheme(isDark);
 
-  // FIXED: Moved unreadPromoCount to the top level to avoid breaking React hook rules
   const {
     isLoggedIn,
     isAuthLoading,
-    unreadPromoCount,
   } = useAuth();
 
   const [feedbackModal, setFeedbackModal] = useState<{
@@ -227,6 +225,7 @@ export default function MainDrawer() {
               </TouchableOpacity>
             ),
             headerRight: () => {
+              const { unreadPromoCount } = useAuth();
               return isLoggedIn ? (
                 <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.notifButton}>
                     <Ionicons name="notifications" size={22} color="#FFF" />
@@ -254,7 +253,8 @@ export default function MainDrawer() {
         <Drawer.Screen name="FAQ" component={FAQScreen} options={{ headerTitle: 'FAQ', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF' }} />
       </Drawer.Navigator>
 
-      {/* FIXED: Removed dangling </View> and </Modal> tags that were here */}
+        </View>
+      </Modal>
 
       <FeedbackModal
         visible={feedbackModal.visible}

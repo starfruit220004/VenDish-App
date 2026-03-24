@@ -66,10 +66,11 @@ export default function Signup() {
       return;
     }
 
-    // Email format validation — must be a valid email with a proper domain (e.g. .com, .org)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    // STRICT Email format validation 
+    // Ensures valid characters, an @ symbol, a domain name, and a proper domain extension (like .com)
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email.trim())) {
-      showFeedback('Error', 'Please enter a valid email address (e.g. name@example.com).', 'error');
+      showFeedback('Invalid Email', 'Please enter a legitimate email address (e.g. yourname@example.com).', 'error');
       return;
     }
 
@@ -81,12 +82,12 @@ export default function Signup() {
     setIsLoading(true);
     try {
       await api.post('/firstapp/users/register/', { 
-        username: username,
-        email: email,
+        username: username.trim(),
+        email: email.trim(),
         password: password,
-        first_name: firstName,
-        middle_name: middleName,
-        last_name: lastName    
+        first_name: firstName.trim(),
+        middle_name: middleName.trim(),
+        last_name: lastName.trim()    
       });
 
       showFeedback(
