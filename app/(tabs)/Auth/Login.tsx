@@ -8,6 +8,17 @@ import api from '../../../api/api';
 import FeedbackModal, { FeedbackAction, FeedbackVariant } from '../FeedbackModal';
 import { getTheme, spacing, typography, radii, layout } from '../../../constants/theme';
 
+import {
+  GoogleSignin,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
+
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_WEB_CLIENT_ID, 
+  offlineAccess: true, 
+  forceCodeForRefreshToken: true,
+});
+
 type DrawerParamList = {
   Tabs: { screen?: string } | undefined;
   Signup: undefined;
@@ -39,6 +50,61 @@ export default function Login() {
     message: '',
     variant: 'info',
   });
+
+  const signInWithGoogle = async () => {
+    try {
+      setIsLoading(true);
+      await GoogleSignin.hasPlayServices();
+      
+      // The response is now an object with a 'type' discriminant
+      const response = await GoogleSignin.signIn();
+
+      if (response.type === 'success') {
+        // Access idToken from the 'data' object
+        const idToken = response.data.idToken;
+
+        if (idToken) {
+          // Send this token to your Django Backend
+          const backendResponse = await api.post('/firstapp/google-login/', { 
+            token: idToken 
+          });
+
+          const { access, refresh, user: backendUser } = backendResponse.data;
+
+          // Login using AuthContext
+          const userData: UserData = {
+            username: backendUser.username,
+            email: backendUser.email || "No Email", 
+            firstname: backendUser.first_name || "",
+            middlename: backendUser.middle_name || "",
+            lastname: backendUser.last_name || "",
+            fullname: backendUser.name || "No Name",
+            address: backendUser.address || '', 
+            phone: backendUser.phone || '',
+            profilePic: backendUser.profile_pic || '',
+          };
+
+          await login(userData, access, refresh);
+
+          showFeedback('Success', 'Google Sign-In successful!', 'success', [{
+            label: 'OK',
+            onPress: () => navigation.navigate('Tabs', { screen: 'FeedTab' }),
+          }]);
+        }
+      } else if (response.type === 'cancelled') {
+        console.log('User cancelled the login flow');
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        showFeedback('Error', 'Google Play Services not available', 'error');
+      } else {
+        console.error('Sign-in Error:', error);
+        showFeedback('Error', 'Google Sign-In failed', 'error');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const showFeedback = (
     title: string,
@@ -165,6 +231,15 @@ export default function Login() {
               ) : (
                 <Text style={styles.loginButtonText}>Log In</Text>
               )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.loginButton, { backgroundColor: '#DB4437' }, isLoading && styles.disabledButton]} 
+              onPress={signInWithGoogle}
+              disabled={isLoading}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.loginButtonText}>Continue with Google</Text>
             </TouchableOpacity>
 
             <View style={styles.signupContainer}>
