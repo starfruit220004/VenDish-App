@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, useColorScheme, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
@@ -8,16 +8,8 @@ import api from '../../../api/api';
 import FeedbackModal, { FeedbackAction, FeedbackVariant } from '../FeedbackModal';
 import { getTheme, spacing, typography, radii, layout } from '../../../constants/theme';
 
-import {
-  GoogleSignin,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
-
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_WEB_CLIENT_ID, 
-  offlineAccess: true, 
-  forceCodeForRefreshToken: true,
-});
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import auth from '@react-native-firebase/auth';
 
 type DrawerParamList = {
   Tabs: { screen?: string } | undefined;
@@ -51,27 +43,48 @@ export default function Login() {
     variant: 'info',
   });
 
-  const signInWithGoogle = async () => {
+  useEffect(() => {
+  GoogleSignin.configure({
+    webClientId: '244769981796-mpki0gvuvqndmvo3dl7773r1uu962k30.apps.googleusercontent.com',
+  });
+  },[])
+
+  
+
+  const showFeedback = (
+    title: string,
+    message: string,
+    variant: FeedbackVariant = 'info',
+    actions?: FeedbackAction[]
+  ) => {
+    setFeedbackModal({ visible: true, title, message, variant, actions });
+  };
+
+  const closeFeedback = () => {
+    setFeedbackModal(prev => ({ ...prev, visible: false }));
+  };
+
+  const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true);
       await GoogleSignin.hasPlayServices();
-      
-      // The response is now an object with a 'type' discriminant
       const response = await GoogleSignin.signIn();
 
       if (response.type === 'success') {
-        // Access idToken from the 'data' object
         const idToken = response.data.idToken;
 
+        // Sign in with Firebase
+        const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+        await auth().signInWithCredential(googleCredential);
+
+        // Send this token to your Django Backend
         if (idToken) {
-          // Send this token to your Django Backend
           const backendResponse = await api.post('/firstapp/google-login/', { 
             token: idToken 
           });
 
           const { access, refresh, user: backendUser } = backendResponse.data;
 
-          // Login using AuthContext
           const userData: UserData = {
             username: backendUser.username,
             email: backendUser.email || "No Email", 
@@ -95,28 +108,11 @@ export default function Login() {
         console.log('User cancelled the login flow');
       }
     } catch (error: any) {
-      if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        showFeedback('Error', 'Google Play Services not available', 'error');
-      } else {
-        console.error('Sign-in Error:', error);
-        showFeedback('Error', 'Google Sign-In failed', 'error');
-      }
+      console.error('Google Sign-In Error:', error);
+      showFeedback('Error', 'Google Sign-In failed', 'error');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const showFeedback = (
-    title: string,
-    message: string,
-    variant: FeedbackVariant = 'info',
-    actions?: FeedbackAction[]
-  ) => {
-    setFeedbackModal({ visible: true, title, message, variant, actions });
-  };
-
-  const closeFeedback = () => {
-    setFeedbackModal(prev => ({ ...prev, visible: false }));
   };
 
   const handleLogin = async () => {
@@ -235,7 +231,7 @@ export default function Login() {
 
             <TouchableOpacity 
               style={[styles.loginButton, { backgroundColor: '#DB4437' }, isLoading && styles.disabledButton]} 
-              onPress={signInWithGoogle}
+              onPress={handleGoogleSignIn}
               disabled={isLoading}
               activeOpacity={0.85}
             >
