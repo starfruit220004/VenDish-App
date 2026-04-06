@@ -4,6 +4,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, useColorScheme, I
 import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useReviews } from './ReviewsContext';
+import { useAuth } from '../context/AuthContext';
 import WriteShopReview from './WriteShopReview';
 import { getTheme, spacing, typography, radii, layout, palette } from '../../constants/theme';
 
@@ -14,6 +15,9 @@ function ShopReviewsHome({ navigation }: any) {
   const isDark = scheme === 'dark';
   const theme = getTheme(isDark);
   const { shopReviews, getAverageShopRating, refreshReviews } = useReviews();
+  const { isLoggedIn } = useAuth();
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -74,7 +78,14 @@ function ShopReviewsHome({ navigation }: any) {
 
         <TouchableOpacity
           style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
-          onPress={() => navigation.navigate('WriteShopReview')}
+          onPress={() => {
+            if (!isLoggedIn) {
+              setModalMessage('Please login first to write a review');
+              setShowModal(true);
+              return;
+            }
+            navigation.navigate('WriteShopReview');
+          }}
           activeOpacity={0.85}
         >
           <Ionicons name="create-outline" size={20} color="#FFF" />
@@ -182,6 +193,24 @@ function ShopReviewsHome({ navigation }: any) {
           </>
         )}
       </View>
+
+      {/* ── Favorite Toggle Modal ────────────────────────────── */}
+      {showModal && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: theme.surface, padding: 20, borderRadius: radii.lg, width: '80%', alignItems: 'center' }}>
+            <Ionicons name="alert-circle-outline" size={32} color={theme.accent} style={{ marginBottom: 10 }} />
+            <Text style={{ ...typography.labelLg, color: theme.textPrimary, marginBottom: 20, textAlign: 'center' }}>
+              {modalMessage}
+            </Text>
+            <TouchableOpacity
+              style={{ paddingVertical: 10, paddingHorizontal: 20, backgroundColor: theme.accent, borderRadius: radii.md }}
+              onPress={() => setShowModal(false)}
+            >
+              <Text style={{ ...typography.labelMd, color: '#FFF' }}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 }

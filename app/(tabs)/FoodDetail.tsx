@@ -4,12 +4,14 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavorites } from './FavoritesContext';
 import { useReviews } from './ReviewsContext';
+import { useAuth } from '../context/AuthContext';
 import { getTheme, spacing, typography, radii, layout, palette } from '../../constants/theme';
 
 export default function FoodDetail({ route, navigation }: any) {
   const { food } = route.params;
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
   const { getFoodReviews, getAverageFoodRating, refreshReviews } = useReviews();
+  const { isLoggedIn } = useAuth();
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const theme = getTheme(isDark);
@@ -259,7 +261,14 @@ export default function FoodDetail({ route, navigation }: any) {
       <View style={[styles.buttonContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
         <TouchableOpacity
           style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
-          onPress={() => navigation.navigate("WriteReview", { food })}
+          onPress={() => {
+            if (!isLoggedIn) {
+              setModalMessage('Please login first to write a review');
+              setShowModal(true);
+              return;
+            }
+            navigation.navigate("WriteReview", { food });
+          }}
           activeOpacity={0.85}
         >
           <Ionicons name="create-outline" size={20} color="#FFFFFF" />

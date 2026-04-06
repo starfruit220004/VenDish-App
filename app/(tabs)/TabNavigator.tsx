@@ -88,7 +88,7 @@ export default function TabNavigator() {
   const theme = getTheme(isDark);
   
   // <-- Grab the unread count from context
-  const { unreadPromoCount } = useAuth(); 
+  const { isLoggedIn } = useAuth(); 
 
   return (
     <Tab.Navigator
@@ -113,14 +113,16 @@ export default function TabNavigator() {
         headerShown: false,
       }}
     >
-      <Tab.Screen
-        name="Wallet"
-        component={WalletTab}
-        options={{
-          tabBarIcon: ({ color, focused }) => <TabIcon name="wallet" color={color} focused={focused} />,
-          tabBarLabel: 'Wallet',
-        }}
-      />
+      {isLoggedIn && (
+        <Tab.Screen
+          name="Wallet"
+          component={WalletTab}
+          options={{
+            tabBarIcon: ({ color, focused }) => <TabIcon name="wallet" color={color} focused={focused} />,
+            tabBarLabel: 'Wallet',
+          }}
+        />
+      )}
 
       <Tab.Screen
         name="Promos"
