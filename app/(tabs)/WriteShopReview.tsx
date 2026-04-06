@@ -14,7 +14,7 @@ type WriteShopReviewProps = {
 export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
-  const { addShopReview, hasReviewedShopToday } = useReviews();
+  const { hasReviewedShopToday } = useReviews();
   const { isLoggedIn, userData } = useAuth();
 
   const [review, setReview] = useState("");

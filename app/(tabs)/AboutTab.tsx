@@ -1,5 +1,5 @@
 import React from 'react';
-import {View,Text,StyleSheet,ScrollView,useColorScheme,Image,TouchableOpacity,Linking,} from 'react-native';
+import {View,Text,StyleSheet,ScrollView,useColorScheme,TouchableOpacity,Linking,} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function AboutTab() {

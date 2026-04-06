@@ -165,7 +165,7 @@ api.interceptors.response.use(
       // Retry the original request with the fresh token
       originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
       return api(originalRequest);
-    } catch (refreshError) {
+    } catch (_refreshError) {
       // Refresh failed — tokens are dead, clean up everything
       console.warn('Session expired. Clearing tokens and logging out.');
       await handleLogout();

@@ -175,7 +175,7 @@ export default function FAQScreen() {
               styles.noResultsText,
               { color: isDarkMode ? '#757575' : '#9E9E9E' }
             ]}>
-              No FAQs found matching "{searchQuery}"
+              {"No FAQs found matching"} &quot;{searchQuery}&quot;
             </Text>
           </View>
         )}
@@ -200,7 +200,7 @@ export default function FAQScreen() {
             styles.contactText,
             { color: isDarkMode ? '#BDBDBD' : '#757575' }
           ]}>
-            We're here to help! Contact us at
+            We&apos;re here to help! Contact us at
           </Text>
           <Text style={[
             styles.contactEmail,

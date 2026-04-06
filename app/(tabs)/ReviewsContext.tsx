@@ -1,5 +1,4 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
 import api from '../../api/api';
 
 export interface FoodReview {
@@ -54,12 +53,7 @@ export const useReviews = () => useContext(ReviewsContext);
 export function ReviewsProvider({ children }: { children: React.ReactNode }) {
   const [foodReviews, setFoodReviews] = useState<FoodReview[]>([]);
   const [shopReviews, setShopReviews] = useState<ShopReview[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load reviews on mount
-  useEffect(() => {
-    loadReviews();
-  }, []);
+  const [, setIsLoading] = useState(true);
 
   const loadReviews = useCallback(async () => {
     try {
@@ -103,6 +97,11 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   }, []);
+
+  // Load reviews on mount
+  useEffect(() => {
+    loadReviews();
+  }, [loadReviews]);
 
   const refreshReviews = useCallback(async () => {
     await loadReviews();

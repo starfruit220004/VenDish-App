@@ -85,7 +85,7 @@ export default function WriteReview({ route, navigation }: Props) {
         );
       }
     }
-  }, [isLoggedIn, userData, food.id, hasReviewedFood, isSubmitting, feedbackModal.visible]);
+  }, [isLoggedIn, userData, food.id, hasReviewedFood, isSubmitting, feedbackModal.visible, navigation]);
 
   const pickMedia = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({

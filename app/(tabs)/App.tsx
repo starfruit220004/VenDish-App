@@ -28,7 +28,7 @@ export default function App() {
             Linking.openURL(createURL('/'));
           }
         }
-      } catch (e) {
+      } catch {
         // ignore parsing errors
       }
     };
@@ -41,7 +41,7 @@ export default function App() {
     const handler = (event: { url: string }) => normalizeAndRoute(event.url);
     const sub = Linking.addEventListener('url', handler as any);
     return () => {
-      try { sub.remove && sub.remove(); } catch (e) {}
+      try { sub.remove && sub.remove(); } catch {}
     };
   }, []);
   return (

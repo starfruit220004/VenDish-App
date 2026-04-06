@@ -1,7 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback, useContext, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../../api/api';
-import { setLogoutHandler } from '../../api/api';
+import api, { setLogoutHandler } from '../../api/api';
 
 // ─── Storage Keys (single source of truth) ───────────────────────────────────
 export const STORAGE_KEYS = {
@@ -40,6 +39,7 @@ export interface UserData {
   profilePic?: string;
   phone?: string;
   address?: string;
+  has_completed_transaction?: boolean;
 }
 
 export interface AuthContextType {
@@ -66,6 +66,7 @@ export interface AuthContextType {
   unreadPromoCount: number;
   fetchUnreadPromoCount: () => Promise<void>;
   decrementUnreadCount: () => void;
+  refreshUserData: () => Promise<void>;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -88,6 +89,7 @@ export const AuthContext = createContext<AuthContextType>({
   unreadPromoCount: 0,
   fetchUnreadPromoCount: async () => {},
   decrementUnreadCount: () => {},
+  refreshUserData: async () => {},
 });
 
 // ─── Custom Hook ─────────────────────────────────────────────────────────────
@@ -180,13 +182,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loadAuthData();
   }, []);
 
+  const refreshUserData = useCallback(async () => {
+    if (!isLoggedIn) return;
+    try {
+      const userResponse = await api.get('/firstapp/users/me/');
+      const backendUser = userResponse.data;
+      
+      setUserData(prev => {
+        if (!prev) return prev;
+        const updated = {
+          ...prev,
+          username: backendUser.username,
+          email: backendUser.email || "No Email", 
+          firstname: backendUser.first_name || "",
+          middlename: backendUser.middle_name || "",
+          lastname: backendUser.last_name || "",
+          fullname: `${backendUser.first_name || ""} ${backendUser.middle_name || ""} ${backendUser.last_name || ""}`.replace(/\s+/g, ' ').trim(),
+          address: backendUser.address || '', 
+          phone: backendUser.phone || '',
+          profilePic: backendUser.profile_pic || '',
+          has_completed_transaction: backendUser.has_completed_transaction || false,
+        };
+        AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(updated)).catch(console.error);
+        return updated;
+      });
+    } catch (error) {
+      console.log('Could not refresh user data', error);
+    }
+  }, [isLoggedIn]);
+
   // ── Fetch fresh coupons AND Notifications once authenticated ────────────────
   useEffect(() => {
     if (isLoggedIn && !isAuthLoading) {
       fetchMyCoupons();
       fetchUnreadPromoCount(); // <-- Calls badge count on login/load
+      refreshUserData();
     }
-  }, [isLoggedIn, isAuthLoading, fetchMyCoupons, fetchUnreadPromoCount]);
+  }, [isLoggedIn, isAuthLoading, fetchMyCoupons, fetchUnreadPromoCount, refreshUserData]);
 
   // ── Register API interceptor logout handler ────────────────────────────────
   useEffect(() => {
@@ -287,6 +319,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         unreadPromoCount,
         fetchUnreadPromoCount,
         decrementUnreadCount,
+        refreshUserData,
       }}
     >
       {children}

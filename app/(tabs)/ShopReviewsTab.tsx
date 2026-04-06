@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, useColorScheme, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, useColorScheme, Image, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useReviews } from './ReviewsContext';
@@ -15,15 +15,25 @@ function ShopReviewsHome({ navigation }: any) {
   const isDark = scheme === 'dark';
   const theme = getTheme(isDark);
   const { shopReviews, getAverageShopRating, refreshReviews } = useReviews();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, userData, refreshUserData } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       refreshReviews();
-    }, [])
+    }, [refreshReviews])
   );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshReviews();
+    if (isLoggedIn && refreshUserData) {
+      await refreshUserData();
+    }
+    setRefreshing(false);
+  }, [refreshReviews, isLoggedIn, refreshUserData]);
 
   const [showAllReviews, setShowAllReviews] = useState(false);
   const averageRating = getAverageShopRating();
@@ -50,6 +60,14 @@ function ShopReviewsHome({ navigation }: any) {
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh} 
+          colors={[theme.accent]} 
+          tintColor={theme.accent} 
+        />
+      }
     >
       {/* Header */}
       <View style={styles.header}>
@@ -76,21 +94,30 @@ function ShopReviewsHome({ navigation }: any) {
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
-          onPress={() => {
-            if (!isLoggedIn) {
-              setModalMessage('Please login first to write a review');
-              setShowModal(true);
-              return;
-            }
-            navigation.navigate('WriteShopReview');
-          }}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="create-outline" size={20} color="#FFF" />
-          <Text style={styles.writeReviewText}>Write a Review</Text>
-        </TouchableOpacity>
+        {!isLoggedIn || userData?.has_completed_transaction ? (
+          <TouchableOpacity
+            style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
+            onPress={() => {
+              if (!isLoggedIn) {
+                setModalMessage('Please login first to write a review');
+                setShowModal(true);
+                return;
+              }
+              navigation.navigate('WriteShopReview');
+            }}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="create-outline" size={20} color="#FFF" />
+            <Text style={styles.writeReviewText}>Write a Review</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ padding: 12, backgroundColor: theme.surfaceElevated, borderRadius: radii.lg, alignItems: 'center', width: '100%' }}>
+            <Ionicons name="lock-closed-outline" size={28} color={theme.textMuted} style={{ marginBottom: 6 }} />
+            <Text style={{ textAlign: 'center', color: theme.textSecondary, ...typography.bodySm }}>
+              You need at least one completed transaction at our physical POS before you can write a review. Please provide your registered account details to the cashier on your next visit!
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Reviews Section */}
@@ -108,13 +135,29 @@ function ShopReviewsHome({ navigation }: any) {
             <Text style={[styles.noReviewsText, { color: theme.textMuted }]}>
               Be the first to review our shop!
             </Text>
-            <TouchableOpacity
-              style={[styles.firstReviewButton, { backgroundColor: theme.accent }]}
-              onPress={() => navigation.navigate('WriteShopReview')}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.firstReviewButtonText}>Write First Review</Text>
-            </TouchableOpacity>
+            {!isLoggedIn || userData?.has_completed_transaction ? (
+              <TouchableOpacity
+                style={[styles.firstReviewButton, { backgroundColor: theme.accent }]}
+                onPress={() => {
+                  if (!isLoggedIn) {
+                    setModalMessage('Please login first to write a review');
+                    setShowModal(true);
+                    return;
+                  }
+                  navigation.navigate('WriteShopReview');
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.firstReviewButtonText}>Write First Review</Text>
+              </TouchableOpacity>
+            ) : (
+               <View style={{ marginTop: 12, padding: 12, backgroundColor: theme.surfaceElevated, borderRadius: radii.lg, alignItems: 'center' }}>
+                 <Ionicons name="lock-closed-outline" size={24} color={theme.textMuted} style={{ marginBottom: 4 }} />
+                 <Text style={{ textAlign: 'center', color: theme.textSecondary, ...typography.bodySm }}>
+                    You need a completed POS transaction to review.
+                 </Text>
+               </View>
+            )}
           </View>
         ) : (
           <>

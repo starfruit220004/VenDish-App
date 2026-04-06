@@ -6,11 +6,11 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
+  useColorScheme,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavorites } from './FavoritesContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useColorScheme } from 'react-native';
 import { getTheme, spacing, typography, radii, layout, palette } from '../../constants/theme';
 
 function FavoritesTab() {

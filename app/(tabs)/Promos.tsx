@@ -40,10 +40,10 @@ export default function Promos() {
   // Per-user dismissed expired promos (persisted in AsyncStorage)
   const [dismissedPromoIds, setDismissedPromoIds] = useState<number[]>([]);
 
-  const getDismissedKey = () => {
+  const getDismissedKey = useCallback(() => {
     if (!userData?.username) return null;
     return `dismissed_promos_${userData.username}`;
-  };
+  }, [userData?.username]);
 
   // Load dismissed IDs from AsyncStorage when user changes
   useEffect(() => {
@@ -61,7 +61,7 @@ export default function Promos() {
       }
     };
     loadDismissed();
-  }, [userData?.username]);
+  }, [userData?.username, getDismissedKey]);
 
   const dismissExpiredPromo = async (id: number) => {
     const updated = [...dismissedPromoIds, id];
@@ -189,16 +189,6 @@ export default function Promos() {
     }
   };
 
-  const handleSignupPress = () => {
-    setAuthModalVisible(false);
-    if (selectedPromo) {
-      navigation.navigate('Signup', {
-        redirect: 'promo-claim',
-        promoId: selectedPromo.id.toString(),
-        promoTitle: selectedPromo.product_name, 
-      });
-    }
-  };
 
   // ✅ HELPER: Format Date
   const formatDate = (dateString: string | undefined | null) => {

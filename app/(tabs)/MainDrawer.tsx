@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   useColorScheme,
   StyleSheet,
@@ -8,14 +8,10 @@ import {
   ActivityIndicator,
   Image,
   StatusBar,
-  Modal,
-  FlatList,
-  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- IMPORTS ---
 import TabNavigator from './TabNavigator';
@@ -29,9 +25,9 @@ import TermsAndConditions from '../(tabs)/TermsAndConditions';
 import AboutTab from './AboutTab';
 import Notifications from './Notifications';
 
-import { useAuth, Coupon } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import FeedbackModal, { FeedbackAction, FeedbackVariant } from './FeedbackModal';
-import { getTheme, spacing, typography, radii, layout, palette } from '../../constants/theme';
+import { getTheme, spacing, typography, radii, palette } from '../../constants/theme';
 
 type DrawerParamList = {
   Tabs: undefined;

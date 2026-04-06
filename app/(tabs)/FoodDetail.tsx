@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFavorites } from './FavoritesContext';
 import { useReviews } from './ReviewsContext';
 import { useAuth } from '../context/AuthContext';
-import { getTheme, spacing, typography, radii, layout, palette } from '../../constants/theme';
+import { getTheme, spacing, typography, radii, palette } from '../../constants/theme';
 
 export default function FoodDetail({ route, navigation }: any) {
   const { food } = route.params;
@@ -259,21 +259,30 @@ export default function FoodDetail({ route, navigation }: any) {
 
       {/* ── Sticky Review CTA ────────────────────────────────── */}
       <View style={[styles.buttonContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
-        <TouchableOpacity
-          style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
-          onPress={() => {
-            if (!isLoggedIn) {
-              setModalMessage('Please login first to write a review');
-              setShowModal(true);
-              return;
-            }
-            navigation.navigate("WriteReview", { food });
-          }}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="create-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.writeReviewText}>Write a Review</Text>
-        </TouchableOpacity>
+        {!isLoggedIn || userData?.has_completed_transaction ? (
+          <TouchableOpacity
+            style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
+            onPress={() => {
+              if (!isLoggedIn) {
+                setModalMessage('Please login first to write a review');
+                setShowModal(true);
+                return;
+              }
+              navigation.navigate("WriteReview", { food });
+            }}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="create-outline" size={20} color="#FFFFFF" />
+            <Text style={styles.writeReviewText}>Write a Review</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ padding: 12, backgroundColor: theme.surfaceElevated, borderRadius: 12, alignItems: 'center' }}>
+            <Ionicons name="lock-closed-outline" size={24} color={theme.textMuted} style={{ marginBottom: 4 }} />
+            <Text style={{ textAlign: 'center', color: theme.textSecondary, fontSize: 13, lineHeight: 18 }}>
+              You need at least one completed transaction at our physical POS before you can write a review. Please provide your registered account details to the cashier on your next visit!
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* ── Favorite Toggle Modal ────────────────────────────── */}

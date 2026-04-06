@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import Promos from './Promos';
 import FeedTab from './FeedTab';
 import WalletTab from './WalletTab';
-import Notifications from './Notifications';
 import FavoritesTab from './FavoritesTab';
 import LocationTab from './LocationTab';
 import ShopReviewsTab from './ShopReviewsTab';

@@ -14,7 +14,7 @@ import { getTheme, spacing, typography, radii, layout, palette } from '../../con
 
 function FeedHome({ navigation }: any) {
   const { isFavorite } = useFavorites();
-  const { getAverageFoodRating, refreshReviews } = useReviews();
+  const { refreshReviews } = useReviews();
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const theme = getTheme(isDark);

@@ -85,6 +85,7 @@ export default function Login() {
         address: backendUser.address || '', 
         phone: backendUser.phone || '',
         profilePic: backendUser.profile_pic || '',
+        has_completed_transaction: backendUser.has_completed_transaction || false,
       };
 
       await login(userData, access, refresh);
@@ -168,9 +169,9 @@ export default function Login() {
             </TouchableOpacity>
 
             <View style={styles.signupContainer}>
-              <Text style={[styles.signupText, { color: theme.textMuted }]}>Don't have an account? </Text>
+              <Text style={[styles.signupText, { color: theme.textMuted }]}>Don&apos;t have an account? </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-                <Text numberOfLines={1} style={[styles.signupLink, { color: theme.accent }]}>Sign Up</Text>
+                <Text numberOfLines={1} style={[styles.signupLink, { color: theme.accent }]}>{"Sign Up"}</Text>
               </TouchableOpacity>
             </View>
           </View>

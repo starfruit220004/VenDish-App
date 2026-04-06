@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { 
   View, Text, TouchableOpacity, FlatList, 
-  StyleSheet, useColorScheme, ActivityIndicator, RefreshControl 
+  StyleSheet, useColorScheme, ActivityIndicator, RefreshControl, Modal 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import api from '../../api/api';
 import { getTheme, spacing, typography, radii } from '../../constants/theme';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +19,7 @@ type NotificationItem = {
 };
 
 export default function Notifications() {
+  const navigation = useNavigation<any>();
   const scheme = useColorScheme();
   const theme = getTheme(scheme === 'dark');
   const { isLoggedIn, decrementUnreadCount } = useAuth();
@@ -25,9 +27,22 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState<NotificationItem | null>(null);
 
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          style={{ paddingLeft: 16 }}
+        >
+          <Ionicons name="arrow-back" size={24} color="#FFF" />
+        </TouchableOpacity>
+      )
+    });
+  }, [navigation]);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!isLoggedIn) {
       setLoading(false);
       return;
@@ -41,16 +56,16 @@ export default function Notifications() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [isLoggedIn]);
 
   useEffect(() => {
     fetchNotifications();
-  }, [isLoggedIn]);
+  }, [fetchNotifications]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchNotifications();
-  }, []);
+  }, [fetchNotifications]);
 
   const markAsRead = async (id: number) => {
   try {
@@ -65,11 +80,18 @@ export default function Notifications() {
   // Filter out any other categories just in case, ensuring only promos show up
   const promoNotifications = notifications.filter(notif => notif.category === 'PROMO');
 
+  const handlePress = (item: NotificationItem) => {
+    if (!item.is_read) {
+      markAsRead(item.id);
+    }
+    setSelectedNotif(item);
+  };
+  
   const renderNotification = ({ item }: { item: NotificationItem }) => {
     return (
       <TouchableOpacity 
         style={[styles.card, { backgroundColor: item.is_read ? theme.background : theme.surfaceElevated }]}
-        onPress={() => !item.is_read && markAsRead(item.id)}
+        onPress={() => handlePress(item)}
         activeOpacity={0.8}
       >
         <View style={[styles.iconWrap, { backgroundColor: '#FFE4E6' }]}>
@@ -122,6 +144,50 @@ export default function Notifications() {
           }
         />
       )}
+
+      {/* MODAL */}
+      <Modal
+        visible={!!selectedNotif}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedNotif(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: theme.surface }]}>
+            <View style={[styles.modalIconWrap, { backgroundColor: '#FFE4E6' }]}>
+              <Ionicons name="notifications-circle" size={48} color="#E11D48" />
+            </View>
+            <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
+              {selectedNotif?.title}
+            </Text>
+            <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+              {selectedNotif?.message}
+            </Text>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalBtn, { backgroundColor: theme.surfaceElevated }]}
+                onPress={() => setSelectedNotif(null)}
+              >
+                <Text style={{ color: theme.textPrimary, fontWeight: '600' }}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalBtn, { backgroundColor: theme.accent }]}
+                onPress={() => {
+                  const msg = (selectedNotif?.message || '').toLowerCase();
+                  const targetTab = msg.includes('expired') ? 'Wallet' : 'Promos';
+                  setSelectedNotif(null);
+                  navigation.navigate('Tabs', { screen: targetTab });
+                }}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '600' }}>
+                  {(selectedNotif?.message || '').toLowerCase().includes('expired') ? 'Go check Wallet' : 'Go see Promos'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -139,4 +205,13 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', marginTop: spacing['4xl'], gap: spacing.sm },
   emptyTitle: { ...typography.headingSm },
   emptySubtitle: { ...typography.bodyMd, textAlign: 'center' },
+
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalBox: { width: '100%', maxWidth: 340, borderRadius: radii.xl, padding: 24, alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  modalIconWrap: { width: 72, height: 72, borderRadius: 36, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { ...typography.headingMd, textAlign: 'center', marginBottom: 8 },
+  modalMessage: { ...typography.bodyMd, textAlign: 'center', marginBottom: 24 },
+  modalButtons: { flexDirection: 'row', gap: 12, width: '100%' },
+  modalBtn: { flex: 1, paddingVertical: 12, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
 });

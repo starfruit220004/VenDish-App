@@ -134,7 +134,7 @@ export default function PrivacyPolicy() {
         ]}
       >
         <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          7. Children's Privacy
+          7. Children&apos;s Privacy
         </Text>
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
           Our services are not directed to children under 13 years of age. We do not knowingly collect personal information from children under 13.
@@ -151,7 +151,7 @@ export default function PrivacyPolicy() {
           8. Changes to This Policy
         </Text>
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
-          We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date.
+          We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the Last Updated date.
         </Text>
       </View>
 
