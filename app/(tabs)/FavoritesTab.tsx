@@ -13,7 +13,7 @@ import { useFavorites } from './FavoritesContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getTheme, spacing, typography, radii, layout, palette } from '../../constants/theme';
 
-function FavoritesTab() {
+function FavoritesTab({ navigation }: any) {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const theme = getTheme(isDark);
@@ -33,8 +33,19 @@ function FavoritesTab() {
     </View>
   );
 
+  const openFoodDetail = (item: any) => {
+    navigation.navigate('Feed', {
+      screen: 'FoodDetail',
+      params: { food: item },
+    });
+  };
+
   const renderItem = ({ item }: any) => (
-    <View style={[styles.card, { width: layout.cardWidth, backgroundColor: theme.surface }, theme.cardShadow]}>
+    <TouchableOpacity
+      style={[styles.card, { width: layout.cardWidth, backgroundColor: theme.surface }, theme.cardShadow]}
+      onPress={() => openFoodDetail(item)}
+      activeOpacity={0.85}
+    >
       <View style={styles.imageContainer}>
         <Image source={item.image} style={styles.image} />
         <View style={[styles.categoryBadge, { backgroundColor: isDark ? theme.surfaceElevated : 'rgba(255,255,255,0.95)' }]}>
@@ -59,7 +70,7 @@ function FavoritesTab() {
         </Text>
         {renderStars(item.rating)}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderEmptyState = () => (

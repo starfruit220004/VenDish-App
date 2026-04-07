@@ -109,7 +109,7 @@ export default function ForgotPassword() {
     setLoading(true);
     try {
       const response = await api.post('/request-otp/', { email: email.trim().toLowerCase() });
-      showFeedback('OTP Sent', response.data.details || 'Check your email inbox for the verification code.', 'success');
+      showFeedback('OTP Sent', response.data.details || 'Check your email inbox for the verification code. It expires in 15 minutes.', 'success');
       setResendCooldown(60);
       setStep(2);
     } catch (error: any) {
@@ -179,7 +179,7 @@ export default function ForgotPassword() {
     setLoading(true);
     try {
       await api.post('/request-otp/', { email: email.trim().toLowerCase() });
-      showFeedback('OTP Resent', 'A new code has been sent to your email.', 'success');
+      showFeedback('OTP Resent', 'A new code has been sent to your email. It expires in 15 minutes.', 'success');
       setResendCooldown(60);
       setOtpDigits(['', '', '', '', '', '']);
       setTimeout(() => otpRefs.current[0]?.focus(), 200);
@@ -407,7 +407,7 @@ export default function ForgotPassword() {
   const titles = ['Forgot Password?', 'Verify OTP', 'Reset Password'];
   const subtitles = [
     'Enter your email to receive a verification code.',
-    `We sent a 6-digit code to ${email}`,
+    `We sent a 6-digit code to ${email}. Enter it within 15 minutes.`,
     'Create a strong new password for your account.',
   ];
 

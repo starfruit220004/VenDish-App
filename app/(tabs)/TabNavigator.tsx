@@ -86,8 +86,9 @@ export default function TabNavigator() {
   const isDark = scheme === 'dark';
   const theme = getTheme(isDark);
   
-  // <-- Grab the unread count from context
-  const { isLoggedIn } = useAuth(); 
+  // Wallet badge reflects the current number of claimed coupons.
+  const { isLoggedIn, claimedCoupons } = useAuth();
+  const walletBadgeCount = claimedCoupons.length;
 
   return (
     <Tab.Navigator
@@ -117,7 +118,14 @@ export default function TabNavigator() {
           name="Wallet"
           component={WalletTab}
           options={{
-            tabBarIcon: ({ color, focused }) => <TabIcon name="wallet" color={color} focused={focused} />,
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon
+                name="wallet"
+                color={color}
+                focused={focused}
+                badgeCount={walletBadgeCount}
+              />
+            ),
             tabBarLabel: 'Wallet',
           }}
         />

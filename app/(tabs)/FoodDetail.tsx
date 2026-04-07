@@ -11,7 +11,7 @@ export default function FoodDetail({ route, navigation }: any) {
   const { food } = route.params;
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
   const { getFoodReviews, getAverageFoodRating, refreshReviews } = useReviews();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, userData } = useAuth();
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const theme = getTheme(isDark);
@@ -31,6 +31,7 @@ export default function FoodDetail({ route, navigation }: any) {
   const averageRating = getAverageFoodRating(food.id);
   const hasReviews = averageRating > 0;
   const displayedReviews = showAllReviews ? foodReviews : foodReviews.slice(0, 3);
+  const canWriteReview = !isLoggedIn || Boolean(userData?.has_completed_transaction);
 
   const handleFavoriteToggle = () => {
     if (isFav) {
@@ -259,7 +260,7 @@ export default function FoodDetail({ route, navigation }: any) {
 
       {/* ── Sticky Review CTA ────────────────────────────────── */}
       <View style={[styles.buttonContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
-        {!isLoggedIn || userData?.has_completed_transaction ? (
+        {canWriteReview ? (
           <TouchableOpacity
             style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
             onPress={() => {
