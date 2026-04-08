@@ -71,6 +71,23 @@ export default function Profile() {
     setFeedbackModal(prev => ({ ...prev, visible: false }));
   };
 
+  const getMiddleInitial = (middleName?: string) => {
+    const cleanMiddleName = middleName?.trim() || '';
+    return cleanMiddleName ? cleanMiddleName.charAt(0) : '';
+  };
+
+  const buildDisplayName = (firstName?: string, middleName?: string, lastName?: string) => {
+    const parts = [firstName?.trim() || ''];
+    const middleInitial = getMiddleInitial(middleName);
+
+    if (middleInitial) {
+      parts.push(middleInitial);
+    }
+
+    parts.push(lastName?.trim() || '');
+    return parts.filter(Boolean).join(' ').trim();
+  };
+
   // ── Edit Profile helpers ───────────────────────────────────────────────────
   const startEditing = () => {
     setEditPhone(userData?.phone || '');
@@ -118,9 +135,9 @@ export default function Profile() {
         address: editAddress.trim(),
         email: editEmail.trim(),
         username: editUsername.trim(),
-        firstname: editFirstname.trim(),
-        middlename: editMiddlename.trim(),
-        lastname: editLastname.trim(),
+        first_name: editFirstname.trim(),
+        middle_name: editMiddlename.trim(),
+        last_name: editLastname.trim(),
       };
 
       if (editProfilePic) {
@@ -147,6 +164,9 @@ export default function Profile() {
       }
 
       const backendUser = response.data;
+      const firstName = backendUser.first_name || backendUser.firstname || '';
+      const middleName = backendUser.middle_name || backendUser.middlename || '';
+      const lastName = backendUser.last_name || backendUser.lastname || '';
 
       // Sync context + AsyncStorage with the server response
       await updateUserData({
@@ -155,9 +175,10 @@ export default function Profile() {
         address: backendUser.address || '',
         email: backendUser.email || '',
         username: backendUser.username || '',
-        firstname: backendUser.firstname || '',
-        middlename: backendUser.middlename || '',
-        lastname: backendUser.lastname || '',
+        firstname: firstName,
+        middlename: middleName,
+        lastname: lastName,
+        fullname: buildDisplayName(firstName, middleName, lastName),
         profilePic: backendUser.profile_pic || '',
       });
 
@@ -296,7 +317,7 @@ export default function Profile() {
           </View>
 
           <Text numberOfLines={1} style={[styles.name, { color: theme.textPrimary }]}>
-              {userData?.firstname} {userData?.middlename ? userData.middlename + ' ' : ''}{userData?.lastname}
+              {buildDisplayName(userData?.firstname, userData?.middlename, userData?.lastname)}
           </Text>
           
           {isEditing ? (
@@ -407,7 +428,7 @@ export default function Profile() {
                     </View>
                   ) : (
                     <Text numberOfLines={1} style={[styles.infoValue, { color: theme.textPrimary }]}>
-                        {userData?.firstname} {userData?.middlename ? userData.middlename + '. ' : ''}{userData?.lastname}
+                        {buildDisplayName(userData?.firstname, userData?.middlename, userData?.lastname)}
                     </Text>
                   )}
               </View>

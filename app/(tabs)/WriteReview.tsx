@@ -16,22 +16,39 @@ type Food = {
 };
 
 type FeedStackParamList = {
-  WriteReview: { food: Food };
+  WriteReview: {
+    food: Food;
+    editReview?: {
+      id: string;
+      rating: number;
+      review: string;
+      media?: string | null;
+    };
+  };
 };
 
 type Props = NativeStackScreenProps<FeedStackParamList, "WriteReview">;
 
 export default function WriteReview({ route, navigation }: Props) {
   const { food } = route.params;
+  const editReview = route.params?.editReview;
+  const isEditMode = Boolean(editReview?.id);
+  const editReviewId = editReview?.id;
+  const editReviewRating = editReview?.rating ?? 0;
+  const editReviewText = editReview?.review ?? '';
+  const editReviewMedia = editReview?.media ?? null;
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
-  const { addFoodReview, hasReviewedFood } = useReviews();
+  const { addFoodReview, hasReviewedFood, updateReview } = useReviews();
   const { isLoggedIn, userData } = useAuth();
 
-  const [review, setReview] = useState("");
-  const [rating, setRating] = useState(0);
-  const [media, setMedia] = useState<string | null>(null);
+  const [review, setReview] = useState(editReviewText);
+  const [rating, setRating] = useState(editReviewRating);
+  const [media, setMedia] = useState<string | null>(editReviewMedia);
+  const [mediaRemoved, setMediaRemoved] = useState(false);
+  const [hasNewMedia, setHasNewMedia] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasJustSubmitted, setHasJustSubmitted] = useState(false);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
   const [feedbackModal, setFeedbackModal] = useState<{
     visible: boolean;
@@ -60,8 +77,17 @@ export default function WriteReview({ route, navigation }: Props) {
   };
 
   useEffect(() => {
+    if (!isEditMode || !editReviewId) return;
+    setReview(editReviewText);
+    setRating(editReviewRating);
+    setMedia(editReviewMedia);
+    setMediaRemoved(false);
+    setHasNewMedia(false);
+  }, [isEditMode, editReviewId, editReviewRating, editReviewText, editReviewMedia]);
 
-    if (isSubmitting || feedbackModal.visible) return;
+  useEffect(() => {
+
+    if (isSubmitting || feedbackModal.visible || hasJustSubmitted) return;
 
     if (isLoggedIn && userData) {
       // Check profile completeness — phone, address, and profile picture are all required
@@ -76,7 +102,7 @@ export default function WriteReview({ route, navigation }: Props) {
       }
       setProfileIncomplete(false);
 
-      if (hasReviewedFood(food.id, userData.username)) {
+      if (!isEditMode && hasReviewedFood(food.id, userData.username)) {
         showFeedback(
           "Already Reviewed",
           "You have already shared your thoughts on this dish. Thank you!",
@@ -85,7 +111,7 @@ export default function WriteReview({ route, navigation }: Props) {
         );
       }
     }
-  }, [isLoggedIn, userData, food.id, hasReviewedFood, isSubmitting, feedbackModal.visible, navigation]);
+  }, [isLoggedIn, userData, food.id, hasReviewedFood, isSubmitting, feedbackModal.visible, hasJustSubmitted, navigation, isEditMode]);
 
   const pickMedia = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -96,6 +122,8 @@ export default function WriteReview({ route, navigation }: Props) {
 
     if (!result.canceled) {
       setMedia(result.assets[0].uri);
+      setMediaRemoved(false);
+      setHasNewMedia(true);
     }
   };
 
@@ -120,28 +148,43 @@ export default function WriteReview({ route, navigation }: Props) {
       return;
     }
 
-    if (hasReviewedFood(food.id, userData.username)) {
+    if (!isEditMode && hasReviewedFood(food.id, userData.username)) {
       showFeedback('Error', 'You have already reviewed this food item.', 'error');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await addFoodReview({
-        foodId: food.id,
-        username: userData.username,
-        rating,
-        review: review.trim(),
-        media: media || undefined,
-      });
-
-      showFeedback('Review Submitted!', 'Thank you for sharing your experience', 'success');
+      if (isEditMode && editReviewId) {
+        await updateReview(editReviewId, {
+          rating,
+          review: review.trim(),
+          media,
+          removeMedia: mediaRemoved,
+          hasNewMedia,
+        });
+        setHasJustSubmitted(true);
+        showFeedback('Review Updated!', 'Your review has been updated successfully.', 'success');
+      } else {
+        await addFoodReview({
+          foodId: food.id,
+          username: userData.username,
+          rating,
+          review: review.trim(),
+          media: media || undefined,
+        });
+        setHasJustSubmitted(true);
+        showFeedback('Review Submitted!', 'Thank you for sharing your experience', 'success');
+      }
       
       setTimeout(() => {
         closeFeedback();
         setReview("");
         setRating(0);
         setMedia(null);
+        setMediaRemoved(false);
+        setHasNewMedia(false);
+        setHasJustSubmitted(false);
         navigation.goBack();
       }, 2000);
     } catch (error: any) {
@@ -168,6 +211,8 @@ export default function WriteReview({ route, navigation }: Props) {
 
   const removeMedia = () => {
     setMedia(null);
+    setMediaRemoved(true);
+    setHasNewMedia(false);
   };
 
   return (
@@ -182,7 +227,7 @@ export default function WriteReview({ route, navigation }: Props) {
           <Ionicons name="arrow-back" size={26} color={isDarkMode ? '#FFFFFF' : '#B71C1C'} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          Write Review
+          {isEditMode ? 'Edit Review' : 'Write Review'}
         </Text>
         <View style={{ width: 40 }} />
       </View>
@@ -305,7 +350,7 @@ export default function WriteReview({ route, navigation }: Props) {
         >
           <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
           <Text style={styles.submitButtonText}>
-            {isSubmitting ? 'Submitting...' : 'Submit Review'}
+            {isSubmitting ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Review' : 'Submit Review')}
           </Text>
         </TouchableOpacity>
       </ScrollView>

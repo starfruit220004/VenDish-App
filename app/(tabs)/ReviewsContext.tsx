@@ -4,6 +4,7 @@ import api from '../../api/api';
 export interface FoodReview {
   id: string;
   foodId: number;
+  foodName?: string;
   username: string;
   profilePic?: string;
   rating: number;
@@ -27,6 +28,7 @@ interface ReviewsContextType {
   shopReviews: ShopReview[];
   addFoodReview: (review: { foodId: number; username: string; rating: number; review: string; media?: string }) => Promise<void>;
   addShopReview: (review: { username: string; rating: number; review: string; media?: string }) => Promise<void>;
+  updateReview: (reviewId: string | number, reviewData: { rating: number; review: string; media?: string | null; removeMedia?: boolean; hasNewMedia?: boolean }) => Promise<void>;
   getFoodReviews: (foodId: number) => FoodReview[];
   getAverageFoodRating: (foodId: number) => number;
   getAverageShopRating: () => number;
@@ -40,6 +42,7 @@ const ReviewsContext = createContext<ReviewsContextType>({
   shopReviews: [],
   addFoodReview: async () => {},
   addShopReview: async () => {},
+  updateReview: async () => {},
   getFoodReviews: () => [],
   getAverageFoodRating: () => 0,
   getAverageShopRating: () => 0,
@@ -80,6 +83,7 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
         .map((r: any) => ({
           id: r.id.toString(),
           foodId: r.product, // The product ID
+          foodName: r.product_name || undefined,
           username: r.username || 'Anonymous',
           profilePic: r.profile_pic || undefined,
           rating: r.rating,
@@ -168,6 +172,49 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadReviews]);
 
+  const updateReview = useCallback(async (
+    reviewId: string | number,
+    reviewData: { rating: number; review: string; media?: string | null; removeMedia?: boolean; hasNewMedia?: boolean }
+  ) => {
+    try {
+      const shouldUploadNewMedia = Boolean(reviewData.hasNewMedia && reviewData.media);
+
+      if (shouldUploadNewMedia) {
+        const formData = new FormData();
+        formData.append('rating', reviewData.rating.toString());
+        formData.append('comment', reviewData.review);
+
+        // @ts-ignore
+        formData.append('image', {
+          uri: reviewData.media,
+          name: 'review_image.jpg',
+          type: 'image/jpeg',
+        });
+
+        await api.patch(`/firstapp/reviews/${reviewId}/`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          transformRequest: (data: any) => data,
+        });
+      } else {
+        const payload: any = {
+          rating: reviewData.rating,
+          comment: reviewData.review,
+        };
+
+        if (reviewData.removeMedia) {
+          payload.image = null;
+        }
+
+        await api.patch(`/firstapp/reviews/${reviewId}/`, payload);
+      }
+
+      await loadReviews();
+    } catch (error) {
+      console.error('Error updating review:', error);
+      throw error;
+    }
+  }, [loadReviews]);
+
   const getFoodReviews = useCallback((foodId: number): FoodReview[] => {
     return foodReviews
       .filter(review => review.foodId === foodId)
@@ -206,6 +253,7 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
         shopReviews,
         addFoodReview,
         addShopReview,
+        updateReview,
         getFoodReviews,
         getAverageFoodRating,
         getAverageShopRating,

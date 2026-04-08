@@ -14,11 +14,12 @@ function ShopReviewsHome({ navigation }: any) {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const theme = getTheme(isDark);
-  const { shopReviews, getAverageShopRating, refreshReviews } = useReviews();
+  const { shopReviews, foodReviews, getAverageShopRating, refreshReviews } = useReviews();
   const { isLoggedIn, userData, refreshUserData } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [showMyReviews, setShowMyReviews] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -37,7 +38,65 @@ function ShopReviewsHome({ navigation }: any) {
 
   const [showAllReviews, setShowAllReviews] = useState(false);
   const averageRating = getAverageShopRating();
-  const displayedReviews = showAllReviews ? shopReviews : shopReviews.slice(0, 5);
+
+  type DisplayReview = {
+    id: string;
+    username: string;
+    profilePic?: string;
+    rating: number;
+    review: string;
+    media?: string;
+    timestamp: number;
+    reviewType: 'shop' | 'food';
+    foodId?: number;
+    foodName?: string;
+  };
+
+  const myUsername = (userData?.username || '').toLowerCase();
+
+  const customerShopReviews: DisplayReview[] = shopReviews.map((review) => ({
+    ...review,
+    reviewType: 'shop' as const,
+  }));
+
+  const myShopReviews: DisplayReview[] = shopReviews
+    .filter((review) => review.username.toLowerCase() === myUsername)
+    .map((review) => ({
+      ...review,
+      reviewType: 'shop' as const,
+    }));
+
+  const myFoodReviews: DisplayReview[] = foodReviews
+    .filter((review) => review.username.toLowerCase() === myUsername)
+    .map((review) => ({
+      ...review,
+      reviewType: 'food' as const,
+      foodId: review.foodId,
+      foodName: review.foodName,
+    }));
+
+  const myCombinedReviews: DisplayReview[] = [...myShopReviews, ...myFoodReviews].sort(
+    (a, b) => b.timestamp - a.timestamp
+  );
+
+  const activeReviews: DisplayReview[] = showMyReviews ? myCombinedReviews : customerShopReviews;
+  const displayedReviews = showAllReviews ? activeReviews : activeReviews.slice(0, 5);
+
+  const isOwnReview = (reviewUsername: string) => {
+    if (!isLoggedIn || !userData?.username) return false;
+    return reviewUsername.toLowerCase() === userData.username.toLowerCase();
+  };
+
+  const toggleMyReviews = () => {
+    if (!isLoggedIn) {
+      setModalMessage('Please login first to view your reviews');
+      setShowModal(true);
+      return;
+    }
+
+    setShowMyReviews((prev) => !prev);
+    setShowAllReviews(false);
+  };
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -122,18 +181,34 @@ function ShopReviewsHome({ navigation }: any) {
 
       {/* Reviews Section */}
       <View style={styles.reviewsSection}>
-        <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
-          Customer Reviews
-        </Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary, marginBottom: 0 }]}> 
+            {showMyReviews ? 'My Reviews' : 'Customer Reviews'}
+          </Text>
+          <TouchableOpacity
+            style={[styles.myReviewsButton, { backgroundColor: theme.accentSoft }]}
+            onPress={toggleMyReviews}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name={showMyReviews ? 'people-outline' : 'person-outline'}
+              size={14}
+              color={theme.accent}
+            />
+            <Text style={[styles.myReviewsButtonText, { color: theme.accent }]}> 
+              {showMyReviews ? 'All Reviews' : 'My Reviews'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-        {shopReviews.length === 0 ? (
+        {activeReviews.length === 0 ? (
           <View style={[styles.noReviewsContainer, { backgroundColor: theme.surface }, theme.cardShadow]}>
             <Ionicons name="chatbox-outline" size={48} color={theme.textDisabled} />
             <Text style={[styles.noReviewsTitle, { color: theme.textPrimary }]}>
-              No reviews yet
+              {showMyReviews ? 'No reviews from your account yet' : 'No reviews yet'}
             </Text>
             <Text style={[styles.noReviewsText, { color: theme.textMuted }]}>
-              Be the first to review our shop!
+              {showMyReviews ? 'Post food or shop reviews to see them here.' : 'Be the first to review our shop!'}
             </Text>
             {!isLoggedIn || userData?.has_completed_transaction ? (
               <TouchableOpacity
@@ -186,16 +261,71 @@ function ShopReviewsHome({ navigation }: any) {
                       </Text>
                     </View>
                   </View>
-                  <View style={styles.reviewRating}>
-                    {[...Array(5)].map((_, i) => (
-                      <Ionicons
-                        key={i}
-                        name={i < review.rating ? 'star' : 'star-outline'}
-                        size={15}
-                        color={palette.warning}
-                      />
-                    ))}
+                  <View style={styles.reviewHeaderActions}>
+                    <View style={styles.reviewRating}>
+                      {[...Array(5)].map((_, i) => (
+                        <Ionicons
+                          key={i}
+                          name={i < review.rating ? 'star' : 'star-outline'}
+                          size={15}
+                          color={palette.warning}
+                        />
+                      ))}
+                    </View>
+                    {isOwnReview(review.username) && (
+                      <TouchableOpacity
+                        style={[styles.editReviewButton, { backgroundColor: theme.accentSoft }]}
+                        onPress={() => {
+                          if (review.reviewType === 'food') {
+                            navigation.navigate('Feed', {
+                              screen: 'WriteReview',
+                              params: {
+                                food: {
+                                  id: review.foodId || 0,
+                                  name: review.foodName || 'Food Item',
+                                  description: 'Food review',
+                                  image: require('../../assets/images/Logo2.jpg'),
+                                  category: 'Food',
+                                },
+                                editReview: {
+                                  id: review.id,
+                                  rating: review.rating,
+                                  review: review.review,
+                                  media: review.media || null,
+                                },
+                              },
+                            });
+                          } else {
+                            navigation.navigate('WriteShopReview', {
+                              editReview: {
+                                id: review.id,
+                                rating: review.rating,
+                                review: review.review,
+                                media: review.media || null,
+                              },
+                            });
+                          }
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="create-outline" size={14} color={theme.accent} />
+                        <Text style={[styles.editReviewButtonText, { color: theme.accent }]}>Edit</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
+                </View>
+
+                <View style={styles.reviewMetaRow}>
+                  <View style={[styles.reviewTypePill, { backgroundColor: theme.accentSoft }]}> 
+                    <Text style={[styles.reviewTypeText, { color: theme.accent }]}> 
+                      {review.reviewType === 'food' ? 'Food Review' : 'Shop Review'}
+                    </Text>
+                  </View>
+                  {review.reviewType === 'food' && (
+                    <Text numberOfLines={1} style={[styles.foodReviewLabel, { color: theme.textMuted }]}> 
+                      {review.foodName || `Food #${review.foodId}`}
+                    </Text>
+                  )}
                 </View>
 
                 <Text style={[styles.reviewText, { color: theme.textSecondary }]}>
@@ -208,20 +338,20 @@ function ShopReviewsHome({ navigation }: any) {
               </View>
             ))}
 
-            {shopReviews.length > 5 && !showAllReviews && (
+            {activeReviews.length > 5 && !showAllReviews && (
               <TouchableOpacity
                 style={styles.showMoreButton}
                 onPress={() => setShowAllReviews(true)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.showMoreText, { color: theme.accent }]}>
-                  Show all {shopReviews.length} reviews
+                  Show all {activeReviews.length} reviews
                 </Text>
                 <Ionicons name="chevron-down" size={20} color={theme.accent} />
               </TouchableOpacity>
             )}
 
-            {showAllReviews && shopReviews.length > 5 && (
+            {showAllReviews && activeReviews.length > 5 && (
               <TouchableOpacity
                 style={styles.showMoreButton}
                 onPress={() => setShowAllReviews(false)}
@@ -314,6 +444,22 @@ const styles = StyleSheet.create({
   // ── Reviews Section ─────────────────────────────
   reviewsSection: { marginBottom: spacing.xl },
   sectionTitle: { ...typography.headingLg, marginBottom: spacing.lg },
+  sectionHeaderRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  myReviewsButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.full,
+    gap: spacing.xxs,
+  },
+  myReviewsButtonText: { ...typography.labelSm },
 
   // ── Empty State ─────────────────────────────────
   noReviewsContainer: {
@@ -361,7 +507,31 @@ const styles = StyleSheet.create({
   reviewAvatarText: { ...typography.headingSm },
   reviewUsername: { ...typography.labelMd, marginBottom: 2 },
   reviewDate: { ...typography.caption },
+  reviewHeaderActions: { alignItems: 'flex-end' as const, gap: spacing.xs },
   reviewRating: { flexDirection: 'row' as const, gap: 2 },
+  editReviewButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.full,
+    gap: spacing.xxs,
+  },
+  editReviewButtonText: { ...typography.labelSm },
+  reviewMetaRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    flexWrap: 'wrap' as const,
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  reviewTypePill: {
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.full,
+  },
+  reviewTypeText: { ...typography.labelSm },
+  foodReviewLabel: { ...typography.caption, maxWidth: '70%' },
   reviewText: { ...typography.bodyMd, lineHeight: 22, marginBottom: spacing.md },
   reviewImage: { width: '100%', height: 220, borderRadius: radii.lg, marginTop: spacing.sm },
 

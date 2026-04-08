@@ -8,23 +8,49 @@ import { useAuth } from '../context/AuthContext';
 
 type WriteShopReviewProps = {
   navigation: any;
-  route?: any;
+  route?: {
+    params?: {
+      editReview?: {
+        id: string;
+        rating: number;
+        review: string;
+        media?: string | null;
+      };
+    };
+  };
 };
 
-export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
+export default function WriteShopReview({ navigation, route }: WriteShopReviewProps) {
+  const editReview = route?.params?.editReview;
+  const isEditMode = Boolean(editReview?.id);
+  const editReviewId = editReview?.id;
+  const editReviewRating = editReview?.rating ?? 0;
+  const editReviewText = editReview?.review ?? '';
+  const editReviewMedia = editReview?.media ?? null;
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
-  const { hasReviewedShopToday } = useReviews();
+  const { hasReviewedShopToday, updateReview } = useReviews();
   const { isLoggedIn, userData } = useAuth();
 
-  const [review, setReview] = useState("");
-  const [rating, setRating] = useState(0);
-  const [media, setMedia] = useState<string | null>(null);
+  const [review, setReview] = useState(editReviewText);
+  const [rating, setRating] = useState(editReviewRating);
+  const [media, setMedia] = useState<string | null>(editReviewMedia);
+  const [mediaRemoved, setMediaRemoved] = useState(false);
+  const [hasNewMedia, setHasNewMedia] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [profileIncomplete, setProfileIncomplete] = useState(false);
+
+  useEffect(() => {
+    if (!isEditMode || !editReviewId) return;
+    setReview(editReviewText);
+    setRating(editReviewRating);
+    setMedia(editReviewMedia);
+    setMediaRemoved(false);
+    setHasNewMedia(false);
+  }, [isEditMode, editReviewId, editReviewRating, editReviewText, editReviewMedia]);
 
   useEffect(() => {
     if (isLoggedIn && userData) {
@@ -40,12 +66,12 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
       }
       setProfileIncomplete(false);
 
-      if (hasReviewedShopToday(userData.username)) {
+      if (!isEditMode && hasReviewedShopToday(userData.username)) {
         setErrorMessage("You can only submit one shop review per day. Please come back tomorrow!");
         setErrorModalVisible(true);
       }
     }
-  }, [isLoggedIn, userData, hasReviewedShopToday]);
+  }, [isLoggedIn, userData, hasReviewedShopToday, isEditMode]);
 
   const pickMedia = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -56,6 +82,8 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
 
     if (!result.canceled) {
       setMedia(result.assets[0].uri);
+      setMediaRemoved(false);
+      setHasNewMedia(true);
     }
   };
 
@@ -81,7 +109,7 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
       setErrorModalVisible(true);
       return;
     }
-    if (hasReviewedShopToday(userData.username)) {
+    if (!isEditMode && hasReviewedShopToday(userData.username)) {
       setErrorMessage('You can only submit one shop review per day. Please come back tomorrow!');
       setErrorModalVisible(true);
       return;
@@ -89,25 +117,35 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
 
     setIsSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append('review_type', 'shop');
-      formData.append('rating', rating.toString());
-      formData.append('comment', review.trim());
-      
-      if (media) {
-        // @ts-ignore
-        formData.append('image', {
-          uri: media,
-          name: 'review_image.jpg',
-          type: 'image/jpeg',
+      if (isEditMode && editReviewId) {
+        await updateReview(editReviewId, {
+          rating,
+          review: review.trim(),
+          media,
+          removeMedia: mediaRemoved,
+          hasNewMedia,
+        });
+      } else {
+        const formData = new FormData();
+        formData.append('review_type', 'shop');
+        formData.append('rating', rating.toString());
+        formData.append('comment', review.trim());
+        
+        if (media) {
+          // @ts-ignore
+          formData.append('image', {
+            uri: media,
+            name: 'review_image.jpg',
+            type: 'image/jpeg',
+          });
+        }
+
+        await api.post('/firstapp/reviews/', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         });
       }
-
-      await api.post('/firstapp/reviews/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
 
       setShowSuccessModal(true);
       
@@ -116,6 +154,8 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
         setReview("");
         setRating(0);
         setMedia(null);
+        setMediaRemoved(false);
+        setHasNewMedia(false);
         navigation.goBack();
       }, 2000);
 
@@ -134,12 +174,14 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
 
   const removeMedia = () => {
     setMedia(null);
+    setMediaRemoved(true);
+    setHasNewMedia(false);
   };
 
   const handleErrorModalClose = () => {
     setErrorModalVisible(false);
     // If they hit the daily limit, pop them back to the previous screen when they dismiss the error
-    if (isLoggedIn && userData && hasReviewedShopToday(userData.username)) {
+    if (!isEditMode && isLoggedIn && userData && hasReviewedShopToday(userData.username)) {
       navigation.goBack();
     }
   };
@@ -156,7 +198,7 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
           <Ionicons name="arrow-back" size={26} color={isDarkMode ? '#FFFFFF' : '#B71C1C'} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          Review Shop
+          {isEditMode ? 'Edit Shop Review' : 'Review Shop'}
         </Text>
         <View style={{ width: 40 }} />
       </View>
@@ -282,7 +324,7 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
         >
           <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
           <Text style={styles.submitButtonText}>
-            {isSubmitting ? 'Submitting...' : 'Submit Review'}
+            {isSubmitting ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Review' : 'Submit Review')}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -296,10 +338,10 @@ export default function WriteShopReview({ navigation }: WriteShopReviewProps) {
           ]}>
             <Ionicons name="checkmark-circle" size={64} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
             <Text style={[styles.modalTitle, { color: isDarkMode ? '#FFFFFF' : '#424242' }]}>
-              Review Submitted!
+              {isEditMode ? 'Review Updated!' : 'Review Submitted!'}
             </Text>
             <Text style={[styles.modalText, { color: isDarkMode ? '#BDBDBD' : '#757575' }]}>
-              Thank you for sharing your experience
+              {isEditMode ? 'Your review changes were saved.' : 'Thank you for sharing your experience'}
             </Text>
           </View>
         </View>

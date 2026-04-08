@@ -17,8 +17,23 @@ export type RootStackParamList = {
 export type FeedStackParamList = {
   FeedHome: undefined;
   FoodDetail: { food: Food };
-  WriteReview: { food: Food };
-  WriteShopReview: undefined;
+  WriteReview: {
+    food: Food;
+    editReview?: {
+      id: string;
+      rating: number;
+      review: string;
+      media?: string | null;
+    };
+  };
+  WriteShopReview: {
+    editReview?: {
+      id: string;
+      rating: number;
+      review: string;
+      media?: string | null;
+    };
+  } | undefined;
 };
 
 // Food Types 

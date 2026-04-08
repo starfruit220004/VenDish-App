@@ -33,6 +33,11 @@ export default function FoodDetail({ route, navigation }: any) {
   const displayedReviews = showAllReviews ? foodReviews : foodReviews.slice(0, 3);
   const canWriteReview = !isLoggedIn || Boolean(userData?.has_completed_transaction);
 
+  const isOwnReview = (reviewUsername: string) => {
+    if (!isLoggedIn || !userData?.username) return false;
+    return reviewUsername.toLowerCase() === userData.username.toLowerCase();
+  };
+
   const handleFavoriteToggle = () => {
     if (isFav) {
       removeFavorite(food.id);
@@ -222,10 +227,30 @@ export default function FoodDetail({ route, navigation }: any) {
                           </Text>
                         </View>
                       </View>
-                      <View style={styles.reviewRating}>
-                        {[...Array(5)].map((_, i) => (
-                          <Ionicons key={i} name={i < review.rating ? 'star' : 'star-outline'} size={13} color={palette.gold} />
-                        ))}
+                      <View style={styles.reviewHeaderActions}>
+                        <View style={styles.reviewRating}>
+                          {[...Array(5)].map((_, i) => (
+                            <Ionicons key={i} name={i < review.rating ? 'star' : 'star-outline'} size={13} color={palette.gold} />
+                          ))}
+                        </View>
+                        {isOwnReview(review.username) && (
+                          <TouchableOpacity
+                            style={[styles.editReviewButton, { backgroundColor: theme.accentSoft }]}
+                            onPress={() => navigation.navigate('WriteReview', {
+                              food,
+                              editReview: {
+                                id: review.id,
+                                rating: review.rating,
+                                review: review.review,
+                                media: review.media || null,
+                              },
+                            })}
+                            activeOpacity={0.8}
+                          >
+                            <Ionicons name="create-outline" size={14} color={theme.accent} />
+                            <Text style={[styles.editReviewButtonText, { color: theme.accent }]}>Edit</Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
                     </View>
                     <Text style={[styles.reviewText, { color: theme.textSecondary }]}>
@@ -480,7 +505,17 @@ const styles = StyleSheet.create({
   reviewAvatarText: { ...typography.headingSm },
   reviewUsername: { ...typography.labelLg },
   reviewDate: { ...typography.caption, marginTop: spacing.xxs },
+  reviewHeaderActions: { alignItems: 'flex-end', gap: spacing.xs },
   reviewRating: { flexDirection: 'row', gap: spacing.xxs },
+  editReviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.full,
+    gap: spacing.xxs,
+  },
+  editReviewButtonText: { ...typography.labelSm },
   reviewText: { ...typography.bodyMd, marginBottom: spacing.sm },
   reviewImage: {
     width: '100%',
