@@ -187,7 +187,7 @@ export default function WriteShopReview({ navigation, route }: WriteShopReviewPr
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: isDarkMode ? '#000' : '#FFEBEE' }]}>
+    <View style={[styles.container, { backgroundColor: isDarkMode ? '#000' : 'transparent' }]}> 
       {/* Header */}
       <View style={[styles.header, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
         <TouchableOpacity

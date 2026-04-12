@@ -10,6 +10,8 @@ export interface FoodReview {
   rating: number;
   review: string;
   media?: string;
+  adminReply?: string;
+  adminReplyUpdatedAt?: number;
   timestamp: number;
 }
 
@@ -20,6 +22,8 @@ export interface ShopReview {
   rating: number;
   review: string;
   media?: string;
+  adminReply?: string;
+  adminReplyUpdatedAt?: number;
   timestamp: number;
 }
 
@@ -74,6 +78,10 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
           rating: r.rating,
           review: r.comment, // Map 'comment' to 'review'
           media: r.image,    // Map 'image' to 'media'
+          adminReply: r.admin_reply || '',
+          adminReplyUpdatedAt: r.admin_reply_updated_at
+            ? new Date(r.admin_reply_updated_at).getTime()
+            : undefined,
           timestamp: new Date(r.created_at).getTime(),
         }));
 
@@ -89,6 +97,10 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
           rating: r.rating,
           review: r.comment,
           media: r.image,
+          adminReply: r.admin_reply || '',
+          adminReplyUpdatedAt: r.admin_reply_updated_at
+            ? new Date(r.admin_reply_updated_at).getTime()
+            : undefined,
           timestamp: new Date(r.created_at).getTime(),
         }));
 

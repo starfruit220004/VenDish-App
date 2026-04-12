@@ -44,6 +44,7 @@ export type Food = {
   image: any;
   category: string;
   price: number;
+  servings: number;
   isAvailable: boolean;
 };
 

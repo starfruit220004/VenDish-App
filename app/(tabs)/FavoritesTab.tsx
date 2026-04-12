@@ -86,7 +86,7 @@ function FavoritesTab({ navigation }: any) {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? theme.background : 'transparent' }]}>
       {favorites.length === 0 ? (
         renderEmptyState()
       ) : (

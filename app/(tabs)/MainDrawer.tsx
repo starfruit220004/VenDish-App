@@ -24,6 +24,7 @@ import PrivacyPolicy from '../(tabs)/PrivacyPolicy';
 import TermsAndConditions from '../(tabs)/TermsAndConditions';
 import AboutTab from './AboutTab';
 import Notifications from './Notifications';
+import TabScreenBackground from './TabScreenBackground';
 
 import { useAuth } from '../context/AuthContext';
 import FeedbackModal, { FeedbackAction, FeedbackVariant } from './FeedbackModal';
@@ -140,9 +141,9 @@ function CustomDrawerContent(props: CustomDrawerContentProps) {
               <Text style={[styles.logoutButtonText, { color: theme.accent }]}>Logout</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={[styles.loginButtonBottom, { backgroundColor: theme.accent }]} onPress={() => props.navigation.navigate('Login' as never)}>
+            <TouchableOpacity style={[styles.loginButtonBottom, { backgroundColor: theme.accent }]} onPress={() => props.navigation.navigate('Signup' as never)}>
               <Ionicons name="log-in-outline" size={22} color="#FFF" />
-              <Text style={styles.loginButtonText}>Login</Text>
+              <Text style={styles.loginButtonText}>Login / Signup</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -193,7 +194,7 @@ export default function MainDrawer() {
 
   if (isAuthLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: isDark ? theme.background : 'transparent' }]}> 
         <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
@@ -202,16 +203,17 @@ export default function MainDrawer() {
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor={isDark ? theme.surfaceElevated : theme.accent} translucent={false} />
-      
-      <Drawer.Navigator
-        drawerContent={(props) => <CustomDrawerContent {...props} showFeedback={showFeedback} />}
-        screenOptions={{
-          headerShown: true,
-          drawerStyle: { backgroundColor: theme.surface, width: 280 },
-          drawerType: 'slide',
-          overlayColor: theme.modalOverlay,
-        }}
-      >
+      <TabScreenBackground>
+        <Drawer.Navigator
+          drawerContent={(props) => <CustomDrawerContent {...props} showFeedback={showFeedback} />}
+          screenOptions={{
+            headerShown: true,
+            sceneStyle: { backgroundColor: isDark ? theme.background : 'transparent' },
+            drawerStyle: { backgroundColor: theme.surface, width: 280 },
+            drawerType: 'slide',
+            overlayColor: theme.modalOverlay,
+          }}
+        >
         <Drawer.Screen
           name="Tabs"
           component={TabNavigator}
@@ -248,7 +250,8 @@ export default function MainDrawer() {
         <Drawer.Screen name="ForgotPassword" component={ForgotPassword} options={{ headerTitle: 'Forgot Password', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF', drawerItemStyle: { display: 'none' } }} />
         <Drawer.Screen name="Profile" component={Profile} options={{ headerTitle: 'Profile', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF', drawerItemStyle: { display: 'none' } }} />
         <Drawer.Screen name="FAQ" component={FAQScreen} options={{ headerTitle: 'FAQ', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF' }} />
-      </Drawer.Navigator>
+        </Drawer.Navigator>
+      </TabScreenBackground>
 
       {/* FIXED: Removed dangling </View> and </Modal> tags that were here */}
 

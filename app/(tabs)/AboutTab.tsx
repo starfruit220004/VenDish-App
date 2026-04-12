@@ -1,18 +1,106 @@
-import React from 'react';
-import {View,Text,StyleSheet,ScrollView,useColorScheme,TouchableOpacity,Linking,} from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {View,Text,StyleSheet,ScrollView,useColorScheme,TouchableOpacity,Linking,ActivityIndicator,} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import api from '../../api/api';
+
+type AboutApiRecord = {
+  id?: number;
+  open_hours?: string;
+};
+
+type ContactApiRecord = {
+  id?: number;
+  phone_number?: string;
+  email?: string;
+  address?: string;
+};
+
+const DEFAULT_INFO = {
+  location: 'Zamboanga City\nZamboanga Peninsula\nPhilippines',
+  operatingHours: 'Everyday: 7:00 AM – 10:00 PM',
+  phone: '+63 123 456 7890',
+  email: 'info@kuyavince.com',
+};
+
+const getLatestRecord = <T extends object>(data: T[] | T | null | undefined): T | null => {
+  if (Array.isArray(data)) {
+    return data[data.length - 1] || null;
+  }
+  if (data && typeof data === 'object') {
+    return data;
+  }
+  return null;
+};
+
+const toDialNumber = (rawPhone: string) => rawPhone.replace(/[^\d+]/g, '');
 
 export default function AboutTab() {
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
+  const [info, setInfo] = useState(DEFAULT_INFO);
+  const [loadingInfo, setLoadingInfo] = useState(true);
 
-  const handleContact = (type: string) => {
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+
+      const fetchAppAboutInfo = async () => {
+        setLoadingInfo(true);
+        try {
+          const [aboutRes, contactRes] = await Promise.all([
+            api.get('/firstapp/about/'),
+            api.get('/firstapp/contact-page/'),
+          ]);
+
+          const aboutData = getLatestRecord<AboutApiRecord>(aboutRes.data);
+          const contactData = getLatestRecord<ContactApiRecord>(contactRes.data);
+
+          if (!isMounted) {
+            return;
+          }
+
+          setInfo((prev) => ({
+            location: contactData?.address || prev.location,
+            operatingHours: aboutData?.open_hours || prev.operatingHours,
+            phone: contactData?.phone_number || prev.phone,
+            email: contactData?.email || prev.email,
+          }));
+        } catch (error) {
+          console.error('Failed to fetch About tab CMS data:', error);
+        } finally {
+          if (isMounted) {
+            setLoadingInfo(false);
+          }
+        }
+      };
+
+      fetchAppAboutInfo();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
+
+  const handleContact = async (type: string) => {
+    const dialPhone = toDialNumber(info.phone);
+    const url = type === 'phone' ? `tel:${dialPhone}` : `mailto:${info.email}`;
+
     switch (type) {
       case 'phone':
-        Linking.openURL('tel:+631234567890');
+      case 'email': {
+        try {
+          const canOpen = await Linking.canOpenURL(url);
+          if (canOpen) {
+            await Linking.openURL(url);
+          }
+        } catch (error) {
+          console.error('Failed to open contact link:', error);
+        }
         break;
-      case 'email':
-        Linking.openURL('mailto:info@kuyavince.com');
+      }
+      default:
         break;
     }
   };
@@ -96,11 +184,13 @@ export default function AboutTab() {
         <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
           <Ionicons name="location" size={20} /> Location
         </Text>
-        <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
-          Zamboanga City{'\n'}
-          Zamboanga Peninsula{'\n'}
-          Philippines
-        </Text>
+        {loadingInfo ? (
+          <ActivityIndicator size="small" color={isDarkMode ? '#FF5252' : '#B71C1C'} />
+        ) : (
+          <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
+            {info.location}
+          </Text>
+        )}
       </View>
 
       {/* Hours Section */}
@@ -114,22 +204,13 @@ export default function AboutTab() {
           <Ionicons name="time" size={20} /> Operating Hours
         </Text>
         <View style={styles.hoursContainer}>
-          <View style={styles.hoursRow}>
-            <Text style={[styles.dayText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
-              Monday - Friday
+          {loadingInfo ? (
+            <ActivityIndicator size="small" color={isDarkMode ? '#FF5252' : '#B71C1C'} />
+          ) : (
+            <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
+              {info.operatingHours}
             </Text>
-            <Text style={[styles.timeText, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-              7:00 AM - 8:00 PM
-            </Text>
-          </View>
-          <View style={styles.hoursRow}>
-            <Text style={[styles.dayText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
-              Saturday - Sunday
-            </Text>
-            <Text style={[styles.timeText, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-              8:00 AM - 9:00 PM
-            </Text>
-          </View>
+          )}
         </View>
       </View>
 
@@ -150,9 +231,13 @@ export default function AboutTab() {
           activeOpacity={0.7}
         >
           <Ionicons name="call" size={24} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
-          <Text style={[styles.contactText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
-            +63 123 456 7890
-          </Text>
+          {loadingInfo ? (
+            <ActivityIndicator size="small" color={isDarkMode ? '#FF5252' : '#B71C1C'} />
+          ) : (
+            <Text style={[styles.contactText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
+              {info.phone}
+            </Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -161,9 +246,13 @@ export default function AboutTab() {
           activeOpacity={0.7}
         >
           <Ionicons name="mail" size={24} color={isDarkMode ? '#FF5252' : '#B71C1C'} />
-          <Text style={[styles.contactText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
-            info@kuyavince.com
-          </Text>
+          {loadingInfo ? (
+            <ActivityIndicator size="small" color={isDarkMode ? '#FF5252' : '#B71C1C'} />
+          ) : (
+            <Text style={[styles.contactText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
+              {info.email}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -227,20 +316,6 @@ const styles = StyleSheet.create({
   },
   hoursContainer: {
     marginTop: 8,
-  },
-  hoursRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  dayText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  timeText: {
-    fontSize: 15,
-    fontWeight: 'bold',
   },
   contactButton: {
     flexDirection: 'row',

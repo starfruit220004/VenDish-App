@@ -15,6 +15,25 @@ import { getTheme, spacing, typography, radii, palette } from '../../constants/t
 import { useAuth, Coupon } from '../context/AuthContext';
 import FeedbackModal from './FeedbackModal';
 
+// Utility function to calculate exact days remaining
+const getDaysRemainingText = (dateString?: string) => {
+  if (!dateString) return null;
+  
+  const expDate = new Date(dateString);
+  const now = new Date();
+  
+  // Strip time values to do a strict day-by-day comparison
+  const utcExp = Date.UTC(expDate.getFullYear(), expDate.getMonth(), expDate.getDate());
+  const utcNow = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const diffDays = Math.floor((utcExp - utcNow) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return null; // Already passed (handled by isExpired state)
+  if (diffDays === 0) return 'Expires today!';
+  if (diffDays === 1) return 'Expires tomorrow!';
+  return `Expires in ${diffDays} days`;
+};
+
 export default function WalletTab() {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
@@ -83,6 +102,9 @@ export default function WalletTab() {
 
     const buttonLabel = isRedeemed ? 'USED' : isExpired ? 'EXPIRED' : 'USE NOW';
     const buttonBg = isRedeemed ? theme.textDisabled : isExpired ? theme.textMuted : theme.accent;
+    
+    // Determine countdown string
+    const daysRemainingText = !isDisabled ? getDaysRemainingText(item.expiration) : null;
 
     return (
       <View style={[styles.couponItem, { backgroundColor: theme.surfaceElevated, opacity: isDisabled ? 0.65 : 1 }, theme.cardShadow]}>
@@ -102,9 +124,16 @@ export default function WalletTab() {
           <Text style={[styles.couponCode, { color: theme.textMuted }]}>Discount: <Text style={{ fontWeight: '700' }}>{item.rate === 'FREE' ? 'FREE ITEM' : `${item.rate} OFF`}</Text></Text>
           
           {item.expiration && (
-             <Text style={[typography.caption, { color: theme.textDisabled, marginTop: spacing.xxs }]}>
-                Expires: {formatDate(item.expiration)}
-             </Text>
+             <View style={{ marginTop: spacing.xxs }}>
+               <Text style={[typography.caption, { color: theme.textDisabled }]}>
+                  Expires: {formatDate(item.expiration)}
+               </Text>
+               {daysRemainingText && (
+                 <Text style={[typography.caption, { color: palette?.warning || theme.accentText, fontWeight: '700', marginTop: 2 }]}>
+                    ⏳ {daysRemainingText}
+                 </Text>
+               )}
+             </View>
           )}
 
           {isRedeemed && <Text style={[typography.caption, { color: theme.textMuted, marginTop: spacing.xxs, fontWeight: '700' }]}>STATUS: REDEEMED</Text>}
@@ -126,7 +155,7 @@ export default function WalletTab() {
 
   if (!isLoggedIn) {
     return (
-      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+      <View style={[styles.centerContainer, { backgroundColor: isDark ? theme.background : 'transparent' }]}>
         <Ionicons name="wallet-outline" size={64} color={theme.textDisabled} />
         <Text numberOfLines={1} style={[styles.emptyTitle, { color: theme.textSecondary, marginTop: spacing.md }]}>Login Required</Text>
         <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>Please login to view your wallet.</Text>
@@ -136,14 +165,14 @@ export default function WalletTab() {
 
   if (isAuthLoading) {
     return (
-      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+      <View style={[styles.centerContainer, { backgroundColor: isDark ? theme.background : 'transparent' }]}>
         <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: isDark ? theme.background : 'transparent' }]}>
       {claimedCoupons.length === 0 ? (
           <View style={styles.emptyWallet}>
                 <Ionicons name="ticket-outline" size={48} color={theme.textDisabled} />

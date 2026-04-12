@@ -48,6 +48,7 @@ function FeedHome({ navigation }: any) {
         image: item.image ? { uri: item.image } : require('../../assets/images/Logo2.jpg'),
         category: item.category,
         price: Number(item.price),
+        servings: Number(item.stock_quantity ?? 0),
         isAvailable: item.is_available,
       }));
       setFoods(mappedFoods);
@@ -85,14 +86,15 @@ function FeedHome({ navigation }: any) {
     return matchesSearch && matchesCategory;
   });
 
-  const getStatusDisplay = (isAvailable: boolean) => {
-    if (isAvailable) return { text: 'Available', color: palette.success };
-    return { text: 'Unavailable', color: palette.error };
+  const getStatusDisplay = (isAvailable: boolean, servings: number) => {
+    if (!isAvailable || servings <= 0) return { text: 'Unavailable', color: palette.error };
+    if (servings < 10) return { text: 'Limited', color: palette.warning };
+    return { text: 'Available', color: palette.success };
   };
 
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: isDark ? theme.background : 'transparent' }]}>
         <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
@@ -100,7 +102,7 @@ function FeedHome({ navigation }: any) {
 
   return (
     <ScrollView
-      style={[styles.scroll, { backgroundColor: theme.background }]}
+      style={[styles.scroll, { backgroundColor: isDark ? theme.background : 'transparent' }]}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -204,7 +206,7 @@ function FeedHome({ navigation }: any) {
       {/* ── Food Grid ──────────────────────────────────────────── */}
       <View style={styles.row}>
         {filteredFoods.map(food => {
-          const status = getStatusDisplay(food.isAvailable);
+          const status = getStatusDisplay(food.isAvailable, food.servings);
           return (
             <TouchableOpacity
               key={food.id}
@@ -234,16 +236,22 @@ function FeedHome({ navigation }: any) {
               </View>
 
               <View style={styles.cardContent}>
-                <Text
-                  style={[styles.foodName, { color: theme.textPrimary }]}
-                  numberOfLines={1}
-                >
-                  {food.name}
-                </Text>
-
-                <Text style={[styles.priceValue, { color: theme.accent }]}>
-                  ₱{food.price.toFixed(0)}
-                </Text>
+                <View style={styles.cardTopRow}>
+                  <View style={styles.cardTextColumn}>
+                    <Text
+                      style={[styles.foodName, { color: theme.textPrimary }]}
+                      numberOfLines={1}
+                    >
+                      {food.name}
+                    </Text>
+                    <Text style={[styles.servingsValue, { color: theme.textMuted }]}> 
+                      {food.servings} {food.servings === 1 ? 'serving' : 'servings'} left
+                    </Text>
+                  </View>
+                  <Text style={[styles.priceValue, { color: theme.accent }]}> 
+                    ₱{food.price.toFixed(0)}
+                  </Text>
+                </View>
               </View>
             </TouchableOpacity>
           );
@@ -267,8 +275,15 @@ function FeedHome({ navigation }: any) {
 const Stack = createNativeStackNavigator<FeedStackParamList>();
 
 export default function FeedTab() {
+  const isDark = useColorScheme() === 'dark';
+  const theme = getTheme(isDark);
+
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        contentStyle: { backgroundColor: isDark ? theme.background : 'transparent' },
+      }}
+    >
       <Stack.Screen
         name="FeedHome"
         component={FeedHome}
@@ -277,7 +292,10 @@ export default function FeedTab() {
       <Stack.Screen
         name="FoodDetail"
         component={FoodDetail}
-        options={{ headerShown: false }}
+        options={{
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.background },
+        }}
       />
       <Stack.Screen
         name="WriteReview"
@@ -455,12 +473,26 @@ const styles = StyleSheet.create({
   cardContent: {
     padding: spacing.md,
   },
+  cardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  cardTextColumn: {
+    flex: 1,
+    paddingRight: spacing.sm,
+  },
   foodName: {
     ...typography.headingSm,
     marginBottom: spacing.xxs,
   },
   priceValue: {
     ...typography.headingMd,
+    textAlign: 'right',
+  },
+  servingsValue: {
+    ...typography.bodySm,
+    marginTop: spacing.xxs,
   },
 
   // ── Empty State ─────────────────────────────────────────────

@@ -10,7 +10,7 @@ export default function TermsAndConditions() {
     <ScrollView
       style={[
         styles.container,
-        { backgroundColor: isDarkMode ? '#000000' : '#F5F5F5' },
+        { backgroundColor: isDarkMode ? '#000000' : 'transparent' },
       ]}
       contentContainerStyle={styles.contentContainer}
     >

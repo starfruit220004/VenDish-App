@@ -225,7 +225,7 @@ export default function Promos() {
 
   if (loading) {
     return (
-      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+      <View style={[styles.centerContainer, { backgroundColor: isDark ? theme.background : 'transparent' }]}>
         <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
@@ -233,7 +233,7 @@ export default function Promos() {
 
   return (
     <ScrollView 
-      style={[styles.scroll, { backgroundColor: theme.background }]} 
+      style={[styles.scroll, { backgroundColor: isDark ? theme.background : 'transparent' }]} 
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -428,7 +428,6 @@ export default function Promos() {
               <Text style={{ fontWeight: '700', color: theme.textPrimary }}>{selectedPromo?.product_name}</Text>{'\n'}
               ({selectedPromo?.name})
             </Text>
-            {/* <Text style={[styles.modalText, { color: theme.textMuted }]}>Code: {selectedPromo?.code}</Text> */}
             <TouchableOpacity
               style={[styles.modalButton, { backgroundColor: theme.accent }]}
               onPress={() => setClaimModalVisible(false)}

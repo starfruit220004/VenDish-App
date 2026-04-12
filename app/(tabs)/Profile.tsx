@@ -32,13 +32,19 @@ export default function Profile() {
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
   const [editPhone, setEditPhone] = useState(userData?.phone || '');
-  const [editAddress, setEditAddress] = useState(userData?.address || '');
   const [editEmail, setEditEmail] = useState(userData?.email || '');
   const [editUsername, setEditUsername] = useState(userData?.username || '');
   const [editFirstname, setEditFirstname] = useState(userData?.firstname || '');
   const [editMiddlename, setEditMiddlename] = useState(userData?.middlename || '');
   const [editLastname, setEditLastname] = useState(userData?.lastname || '');
   const [editProfilePic, setEditProfilePic] = useState<string | null>(null);
+  
+  // Chunked Address States
+  const [editStreet, setEditStreet] = useState('');
+  const [editBarangay, setEditBarangay] = useState('');
+  const [editCity, setEditCity] = useState('');
+  const [editZip, setEditZip] = useState('');
+
   const [isSaving, setIsSaving] = useState(false);
 
   // Modal State
@@ -90,8 +96,32 @@ export default function Profile() {
 
   // ── Edit Profile helpers ───────────────────────────────────────────────────
   const startEditing = () => {
+    // Robust parser to handle legacy monolithic address strings
+    const addr = userData?.address || '';
+    const parts = addr.split(',').map(s => s.trim()).filter(Boolean);
+    
+    if (parts.length >= 3) {
+      const lastPart = parts[parts.length - 1];
+      // Check if the last part looks like a zip code
+      if (/\d/.test(lastPart) && lastPart.length <= 6) {
+         setEditZip(lastPart);
+         setEditCity(parts[parts.length - 2] || '');
+         setEditBarangay(parts[parts.length - 3] || '');
+         setEditStreet(parts.slice(0, parts.length - 3).join(', '));
+      } else {
+         setEditZip('');
+         setEditCity(parts[parts.length - 1] || '');
+         setEditBarangay(parts[parts.length - 2] || '');
+         setEditStreet(parts.slice(0, parts.length - 2).join(', '));
+      }
+    } else {
+      setEditStreet(addr);
+      setEditBarangay('');
+      setEditCity('');
+      setEditZip('');
+    }
+
     setEditPhone(userData?.phone || '');
-    setEditAddress(userData?.address || '');
     setEditEmail(userData?.email || '');
     setEditUsername(userData?.username || '');
     setEditFirstname(userData?.firstname || '');
@@ -130,9 +160,15 @@ export default function Profile() {
     try {
       let response;
 
+      // Compile chunked address elements into standard format
+      const combinedAddress = [editStreet, editBarangay, editCity, editZip]
+        .map(part => part.trim())
+        .filter(Boolean)
+        .join(', ');
+
       const payload = {
         phone: editPhone.trim(),
-        address: editAddress.trim(),
+        address: combinedAddress,
         email: editEmail.trim(),
         username: editUsername.trim(),
         first_name: editFirstname.trim(),
@@ -285,7 +321,7 @@ export default function Profile() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.background }]}
+      style={[styles.container, { backgroundColor: isDark ? theme.background : 'transparent' }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0} 
     >
@@ -459,27 +495,46 @@ export default function Profile() {
 
               <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
 
-              {/* Address */}
+              {/* Address - Chunked Layout */}
               <View style={[styles.infoRow, { flexDirection: 'column', alignItems: 'flex-start', gap: spacing.sm }]}>
                   <View style={styles.infoLabelContainer}>
                       <Ionicons name="location-outline" size={20} color={theme.accent} />
                       <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Address</Text>
                   </View>
                   {isEditing ? (
-                    <TextInput
-                      style={[styles.editInputWide, { 
-                        color: theme.textPrimary, 
-                        borderColor: theme.border, 
-                        backgroundColor: theme.surfaceElevated,
-                        minHeight: 70,
-                        textAlignVertical: 'top'
-                      }]}
-                      value={editAddress}
-                      onChangeText={setEditAddress}
-                      placeholder="Unit/House No./Street Name/Barangay/City/Zip Code"
-                      placeholderTextColor={theme.textDisabled}
-                      multiline
-                    />
+                    <View style={{width: '100%', gap: spacing.sm, paddingLeft: 28}}>
+                      <TextInput
+                        style={[styles.editInputWide, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
+                        value={editStreet}
+                        onChangeText={setEditStreet}
+                        placeholder="Unit, Building, House No., Street"
+                        placeholderTextColor={theme.textDisabled}
+                      />
+                      <TextInput
+                        style={[styles.editInputWide, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
+                        value={editBarangay}
+                        onChangeText={setEditBarangay}
+                        placeholder="Barangay"
+                        placeholderTextColor={theme.textDisabled}
+                      />
+                      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                        <TextInput
+                          style={[styles.editInputWide, { flex: 2, color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
+                          value={editCity}
+                          onChangeText={setEditCity}
+                          placeholder="City / Municipality"
+                          placeholderTextColor={theme.textDisabled}
+                        />
+                        <TextInput
+                          style={[styles.editInputWide, { flex: 1.2, color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
+                          value={editZip}
+                          onChangeText={setEditZip}
+                          placeholder="ZIP Code"
+                          keyboardType="number-pad"
+                          placeholderTextColor={theme.textDisabled}
+                        />
+                      </View>
+                    </View>
                   ) : (
                     <Text style={[styles.infoValue, { 
                       color: userData?.address ? theme.textPrimary : theme.textDisabled, 
@@ -631,7 +686,6 @@ const styles = StyleSheet.create({
   infoLabel: { ...typography.bodyMd },
   infoValue: { ...typography.bodyMd, fontWeight: '500' as const, flex: 1, textAlign: 'right' as const },
   
-  // FIX: Specifically bounded input for the header Username
   editUsernameInput: {
     ...typography.bodySm,
     fontWeight: '500' as const,
@@ -640,11 +694,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
     minWidth: 150,
-    maxWidth: 200, // Prevents it from stretching to the screen edges
+    maxWidth: 200, 
     textAlign: 'center'
   },
 
-  // FIX: Changed from flex: 1 to width: '60%' to prevent it from squishing the label
   editInput: { 
     ...typography.bodySm, 
     fontWeight: '500' as const, 
@@ -656,7 +709,16 @@ const styles = StyleSheet.create({
     textAlign: 'right' 
   },
 
-  editInputWide: { ...typography.bodySm, fontWeight: '500' as const, borderWidth: 1, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, width: '100%', textAlign: 'left' },
+  editInputWide: { 
+    ...typography.bodySm, 
+    fontWeight: '500' as const, 
+    borderWidth: 1, 
+    borderRadius: radii.md, 
+    paddingHorizontal: spacing.md, 
+    paddingVertical: spacing.sm, 
+    width: '100%', 
+    textAlign: 'left' 
+  },
   divider: { height: 1, marginHorizontal: spacing.lg },
   menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.lg },
   menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md},

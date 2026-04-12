@@ -70,7 +70,7 @@ export default function FAQScreen() {
   const categories = Array.from(new Set(faqs.map(f => f.category)));
 
   return (
-    <View style={[styles.container, { backgroundColor: isDarkMode ? '#000000' : '#F5F5F5' }]}>
+    <View style={[styles.container, { backgroundColor: isDarkMode ? '#000000' : 'transparent' }]}> 
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

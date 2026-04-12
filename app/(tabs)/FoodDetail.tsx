@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFavorites } from './FavoritesContext';
 import { useReviews } from './ReviewsContext';
 import { useAuth } from '../context/AuthContext';
+import api from '../../api/api';
 import { getTheme, spacing, typography, radii, palette } from '../../constants/theme';
 
 export default function FoodDetail({ route, navigation }: any) {
@@ -20,11 +21,36 @@ export default function FoodDetail({ route, navigation }: any) {
   const [showModal, setShowModal] = React.useState(false);
   const [modalMessage, setModalMessage] = React.useState('');
   const [showAllReviews, setShowAllReviews] = React.useState(false);
+  const [servings, setServings] = React.useState(Number(food.servings ?? food.stock ?? 0));
+  const [isAvailable, setIsAvailable] = React.useState(Boolean(food.isAvailable ?? food.is_available ?? servings > 0));
 
   useFocusEffect(
     useCallback(() => {
       refreshReviews();
-    }, [refreshReviews])
+
+      let isMounted = true;
+
+      const refreshProductStock = async () => {
+        try {
+          const response = await api.get(`/firstapp/products/${food.id}/`);
+          if (!isMounted) return;
+
+          const latestServings = Number(response.data?.stock_quantity ?? 0);
+          const latestAvailability = Boolean(response.data?.is_available ?? latestServings > 0);
+
+          setServings(latestServings);
+          setIsAvailable(latestAvailability);
+        } catch (error) {
+          console.error('Failed to refresh product servings:', error);
+        }
+      };
+
+      refreshProductStock();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [refreshReviews, food.id])
   );
 
   const foodReviews = getFoodReviews(food.id);
@@ -39,6 +65,12 @@ export default function FoodDetail({ route, navigation }: any) {
   };
 
   const handleFavoriteToggle = () => {
+    if (!isLoggedIn && !isFav) {
+      setModalMessage('Please login first to add favorites');
+      setShowModal(true);
+      return;
+    }
+
     if (isFav) {
       removeFavorite(food.id);
       setModalMessage(`${food.name} removed from favorites!`);
@@ -66,7 +98,7 @@ export default function FoodDetail({ route, navigation }: any) {
   };
 
   // Update the call to pass both properties
-  const stockStatus = getStockStatus(food.isAvailable, food.stock);
+  const stockStatus = getStockStatus(isAvailable, servings);
 
   const renderStars = (rating: number) => {
     const roundedRating = Math.round(rating);
@@ -94,6 +126,18 @@ export default function FoodDetail({ route, navigation }: any) {
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const formatDateTime = (timestamp?: number) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
   };
 
   return (
@@ -151,7 +195,7 @@ export default function FoodDetail({ route, navigation }: any) {
             <View style={styles.priceStockGrid}>
               {[
                 { icon: 'pricetag-outline' as const, label: 'Price', value: `₱${food.price}`, valueColor: theme.textPrimary },
-                { icon: 'cube-outline' as const, label: 'Stock', value: `${food.stock ?? '—'} servings`, valueColor: theme.textPrimary },
+                { icon: 'cube-outline' as const, label: 'Servings', value: `${servings} servings`, valueColor: theme.textPrimary },
                 { icon: 'pulse-outline' as const, label: 'Status', value: stockStatus.text, valueColor: stockStatus.color },
                 { icon: 'fast-food-outline' as const, label: 'Category', value: food.category, valueColor: theme.textPrimary },
               ].map((item, idx) => (
@@ -179,7 +223,11 @@ export default function FoodDetail({ route, navigation }: any) {
           >
             <Ionicons name={isFav ? 'heart' : 'heart-outline'} size={22} color="#FFFFFF" />
             <Text style={styles.favoriteButtonText}>
-              {isFav ? 'Remove from Favorites' : 'Add to Favorites'}
+              {!isLoggedIn && !isFav
+                ? 'Login to Add Favorites'
+                : isFav
+                ? 'Remove from Favorites'
+                : 'Add to Favorites'}
             </Text>
           </TouchableOpacity>
 
@@ -256,9 +304,29 @@ export default function FoodDetail({ route, navigation }: any) {
                     <Text style={[styles.reviewText, { color: theme.textSecondary }]}>
                       {review.review}
                     </Text>
+
+                    {/* MOVED IMAGE HERE */}
                     {review.media && (
                       <Image source={{ uri: review.media }} style={styles.reviewImage} />
                     )}
+
+                    {/* MOVED ADMIN REPLY HERE */}
+                    {review.adminReply ? (
+                      <View
+                        style={[
+                          styles.adminReplyContainer,
+                          { backgroundColor: theme.accentSoft, borderColor: theme.accent },
+                        ]}
+                      >
+                        <Text style={[styles.adminReplyLabel, { color: theme.accent }]}> 
+                          Admin Reply{review.adminReplyUpdatedAt ? ` • ${formatDateTime(review.adminReplyUpdatedAt)}` : ''}
+                        </Text>
+                        <Text style={[styles.adminReplyText, { color: theme.accentText }]}> 
+                          {review.adminReply}
+                        </Text>
+                      </View>
+                    ) : null}
+
                   </View>
                 ))}
 
@@ -284,7 +352,7 @@ export default function FoodDetail({ route, navigation }: any) {
       </ScrollView>
 
       {/* ── Sticky Review CTA ────────────────────────────────── */}
-      <View style={[styles.buttonContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
+      <View style={[styles.buttonContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}> 
         {canWriteReview ? (
           <TouchableOpacity
             style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
@@ -517,6 +585,15 @@ const styles = StyleSheet.create({
   },
   editReviewButtonText: { ...typography.labelSm },
   reviewText: { ...typography.bodyMd, marginBottom: spacing.sm },
+  adminReplyContainer: {
+    borderWidth: 1,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    marginTop: spacing.sm, // <-- Added margin top to separate it from the image above
+  },
+  adminReplyLabel: { ...typography.labelSm, marginBottom: spacing.xxs },
+  adminReplyText: { ...typography.bodySm, lineHeight: 20 },
   reviewImage: {
     width: '100%',
     height: 200,

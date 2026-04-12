@@ -46,6 +46,8 @@ function ShopReviewsHome({ navigation }: any) {
     rating: number;
     review: string;
     media?: string;
+    adminReply?: string;
+    adminReplyUpdatedAt?: number;
     timestamp: number;
     reviewType: 'shop' | 'food';
     foodId?: number;
@@ -103,6 +105,18 @@ function ShopReviewsHome({ navigation }: any) {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const formatDateTime = (timestamp?: number) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
   const renderStars = (rating: number, size = 20) => {
     const roundedRating = Math.round(rating);
     return (
@@ -116,7 +130,7 @@ function ShopReviewsHome({ navigation }: any) {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
+      style={[styles.container, { backgroundColor: isDark ? theme.background : 'transparent' }]}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -332,9 +346,26 @@ function ShopReviewsHome({ navigation }: any) {
                   {review.review}
                 </Text>
 
+                {/* Move image rendering ABOVE the admin reply */}
                 {review.media && (
                   <Image source={{ uri: review.media }} style={styles.reviewImage} />
                 )}
+
+                {review.adminReply ? (
+                  <View
+                    style={[
+                      styles.adminReplyContainer,
+                      { backgroundColor: theme.accentSoft, borderColor: theme.accent },
+                    ]}
+                  >
+                    <Text style={[styles.adminReplyLabel, { color: theme.accent }]}> 
+                      Admin Reply{review.adminReplyUpdatedAt ? ` • ${formatDateTime(review.adminReplyUpdatedAt)}` : ''}
+                    </Text>
+                    <Text style={[styles.adminReplyText, { color: theme.accentText }]}> 
+                      {review.adminReply}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             ))}
 
@@ -389,8 +420,15 @@ function ShopReviewsHome({ navigation }: any) {
 }
 
 export default function ShopReviewsTab() {
+  const isDark = useColorScheme() === 'dark';
+  const theme = getTheme(isDark);
+
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        contentStyle: { backgroundColor: isDark ? theme.background : 'transparent' },
+      }}
+    >
       <Stack.Screen name="ShopReviewsHome" component={ShopReviewsHome} options={{ headerShown: false }} />
       <Stack.Screen name="WriteShopReview" component={WriteShopReview} options={{ headerShown: false }} />
     </Stack.Navigator>
@@ -533,7 +571,16 @@ const styles = StyleSheet.create({
   reviewTypeText: { ...typography.labelSm },
   foodReviewLabel: { ...typography.caption, maxWidth: '70%' },
   reviewText: { ...typography.bodyMd, lineHeight: 22, marginBottom: spacing.md },
-  reviewImage: { width: '100%', height: 220, borderRadius: radii.lg, marginTop: spacing.sm },
+  adminReplyContainer: {
+    borderWidth: 1,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    marginTop: spacing.sm, // <-- Added margin top to separate it from the image above
+  },
+  adminReplyLabel: { ...typography.labelSm, marginBottom: spacing.xxs },
+  adminReplyText: { ...typography.bodySm, lineHeight: 20 },
+  reviewImage: { width: '100%', height: 220, borderRadius: radii.lg, marginTop: spacing.sm }, // The existing marginTop now spaces the image from the reviewText
 
   // ── Show More ───────────────────────────────────
   showMoreButton: {

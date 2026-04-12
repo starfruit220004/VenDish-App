@@ -8,6 +8,7 @@ import WalletTab from './WalletTab';
 import FavoritesTab from './FavoritesTab';
 import LocationTab from './LocationTab';
 import ShopReviewsTab from './ShopReviewsTab';
+import TabScreenBackground from './TabScreenBackground';
 import { getTheme, layout, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../context/AuthContext'; // <-- Added useAuth import
 
@@ -91,28 +92,32 @@ export default function TabNavigator() {
   const walletBadgeCount = claimedCoupons.length;
 
   return (
-    <Tab.Navigator
-      initialRouteName="Promos"
-      screenOptions={{
-        tabBarActiveTintColor: theme.tabBarActive,
-        tabBarInactiveTintColor: theme.tabBarInactive,
-        tabBarStyle: {
-          backgroundColor: theme.tabBarBg,
-          borderTopWidth: 1,
-          borderTopColor: theme.tabBarBorder,
-          height: layout.tabBarHeight,
-          paddingBottom: Platform.OS === 'ios' ? spacing.sm : spacing.md,
-          paddingTop: spacing.xs,
-          ...theme.cardShadow,
-          shadowOffset: { width: 0, height: -2 },
-        },
-        tabBarLabelStyle: {
-          ...typography.labelSm,
-          marginTop: spacing.xxs,
-        },
-        headerShown: false,
-      }}
-    >
+    <TabScreenBackground>
+      <Tab.Navigator
+        initialRouteName="Promos"
+        screenOptions={{
+          tabBarActiveTintColor: theme.tabBarActive,
+          tabBarInactiveTintColor: theme.tabBarInactive,
+          sceneStyle: {
+            backgroundColor: isDark ? theme.background : 'transparent',
+          },
+          tabBarStyle: {
+            backgroundColor: theme.tabBarBg,
+            borderTopWidth: 1,
+            borderTopColor: theme.tabBarBorder,
+            height: layout.tabBarHeight,
+            paddingBottom: Platform.OS === 'ios' ? spacing.sm : spacing.md,
+            paddingTop: spacing.xs,
+            ...theme.cardShadow,
+            shadowOffset: { width: 0, height: -2 },
+          },
+          tabBarLabelStyle: {
+            ...typography.labelSm,
+            marginTop: spacing.xxs,
+          },
+          headerShown: false,
+        }}
+      >
       {isLoggedIn && (
         <Tab.Screen
           name="Wallet"
@@ -175,6 +180,7 @@ export default function TabNavigator() {
           tabBarLabel: 'Reviews',
         }}
       />
-    </Tab.Navigator>
+      </Tab.Navigator>
+    </TabScreenBackground>
   );
 }

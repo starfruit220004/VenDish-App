@@ -67,7 +67,7 @@ export default function LocationTab() {
 
   return (
     <ScrollView
-      style={[styles.scrollContainer, { backgroundColor: theme.background }]}
+      style={[styles.scrollContainer, { backgroundColor: isDark ? theme.background : 'transparent' }]}
       contentContainerStyle={styles.container}
       refreshControl={
         <RefreshControl

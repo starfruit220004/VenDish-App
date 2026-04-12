@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, useColorScheme, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, useColorScheme, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Keyboard } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,11 @@ import { useAuth, UserData } from '../../context/AuthContext';
 import api from '../../../api/api'; 
 import FeedbackModal, { FeedbackAction, FeedbackVariant } from '../FeedbackModal';
 import { getTheme, spacing, typography, radii, layout } from '../../../constants/theme';
+import {
+  extractAuthErrorMessage,
+  normalizeUsername,
+  validateLoginInput,
+} from '../../services/authValidation';
 
 type DrawerParamList = {
   Tabs: { screen?: string } | undefined;
@@ -54,17 +59,25 @@ export default function Login() {
   };
 
   const handleLogin = async () => {
-    if (!username || !password) {
-      showFeedback('Error', 'Please enter both username and password.', 'error');
+    Keyboard.dismiss();
+
+    const normalizedUsername = normalizeUsername(username);
+    const validationError = validateLoginInput({
+      username: normalizedUsername,
+      password,
+    });
+
+    if (validationError) {
+      showFeedback('Invalid Input', validationError, 'error');
       return;
     }
 
     setIsLoading(true);
     try {
       const response = await api.post('/firstapp/token/', {
-        username: username,
-        password: password,
-        platform: 'app'
+        username: normalizedUsername,
+        password,
+        platform: 'app',
       });
 
       const { access, refresh } = response.data;
@@ -104,7 +117,14 @@ export default function Login() {
 
     } catch (error: any) {
       console.error('Login Error:', error);
-      showFeedback('Login Failed', 'Invalid username or password.', 'error');
+
+      const msg = extractAuthErrorMessage(
+        error,
+        'Login failed. Please try again in a moment.',
+        'login'
+      );
+
+      showFeedback('Login Failed', msg, 'error');
     } finally {
       setIsLoading(false);
     }

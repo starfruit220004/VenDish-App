@@ -6,6 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../../../api/api'; 
 import FeedbackModal, { FeedbackAction, FeedbackVariant } from '../FeedbackModal';
 import { getTheme, spacing, typography, radii, layout } from '../../../constants/theme';
+import {
+  extractAuthErrorMessage,
+  normalizeEmail,
+  normalizeName,
+  normalizeUsername,
+  validateSignupInput,
+} from '../../services/authValidation';
 
 type DrawerParamList = {
   Tabs: undefined;
@@ -30,8 +37,9 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState('');
   
   const [isLoading, setIsLoading] = useState(false);
+  // We only need one state to control the visibility of both fields
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
   const [feedbackModal, setFeedbackModal] = useState<{
     visible: boolean;
     title: string;
@@ -61,38 +69,41 @@ export default function Signup() {
   const handleSignup = async () => {
     Keyboard.dismiss();
 
-    if (!firstName || !lastName || !username || !email || !password || !confirmPassword) {
-      showFeedback('Error', 'Please fill in all fields.', 'error');
-      return;
-    }
+    const normalizedFirstName = normalizeName(firstName);
+    const normalizedMiddleName = normalizeName(middleName);
+    const normalizedLastName = normalizeName(lastName);
+    const normalizedUsername = normalizeUsername(username);
+    const normalizedEmail = normalizeEmail(email);
 
-    // STRICT Email format validation 
-    // Ensures valid characters, an @ symbol, a domain name, and a proper domain extension (like .com)
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(email.trim())) {
-      showFeedback('Invalid Email', 'Please enter a legitimate email address (e.g. yourname@example.com).', 'error');
-      return;
-    }
+    const validationError = validateSignupInput({
+      firstName: normalizedFirstName,
+      middleName: normalizedMiddleName,
+      lastName: normalizedLastName,
+      username: normalizedUsername,
+      email: normalizedEmail,
+      password,
+      confirmPassword,
+    });
 
-    if (password !== confirmPassword) {
-      showFeedback('Error', 'Passwords do not match.', 'error');
+    if (validationError) {
+      showFeedback('Invalid Input', validationError, 'error');
       return;
     }
 
     setIsLoading(true);
     try {
       await api.post('/firstapp/users/register/', { 
-        username: username.trim(),
-        email: email.trim(),
-        password: password,
-        first_name: firstName.trim(),
-        middle_name: middleName.trim(),
-        last_name: lastName.trim()    
+        username: normalizedUsername,
+        email: normalizedEmail,
+        password,
+        first_name: normalizedFirstName,
+        middle_name: normalizedMiddleName,
+        last_name: normalizedLastName,
       });
 
       showFeedback(
-        'Success',
-        'Account created successfully! Please log in.',
+        'Check Your Email',
+        'Account created successfully. Please verify your email using the link we sent before logging in.',
         'success',
         [{
           label: 'OK',
@@ -111,18 +122,13 @@ export default function Signup() {
 
     } catch (error: any) {
       console.error('Signup Error:', error);
-      
-      let msg = 'Signup failed. Please check your internet connection.';
-      if (error.response?.data) {
-          const data = error.response.data;
-          if (typeof data === 'object') {
-             const key = Object.keys(data)[0];
-             const errorVal = Array.isArray(data[key]) ? data[key][0] : data[key];
-             msg = `${key.toUpperCase()}: ${errorVal}`;
-          } else {
-             msg = String(data);
-          }
-      }
+
+      const msg = extractAuthErrorMessage(
+        error,
+        'Signup failed. Please try again in a moment.',
+        'signup'
+      );
+
       showFeedback('Signup Failed', msg, 'error');
     } finally {
       setIsLoading(false);
@@ -198,10 +204,11 @@ export default function Signup() {
                   placeholderTextColor={theme.textDisabled}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  secureTextEntry={!showConfirmPassword}
+                  secureTextEntry={!showPassword}
                 />
-                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: spacing.xxs }}>
-                  <Ionicons name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} size={20} color={iconColor} />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: spacing.xxs }}>
+                  {/* Icon tied directly to showPassword */}
+                  <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={iconColor} />
                 </TouchableOpacity>
               </View>
 

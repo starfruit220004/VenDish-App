@@ -21,7 +21,8 @@ type NotificationItem = {
 export default function Notifications() {
   const navigation = useNavigation<any>();
   const scheme = useColorScheme();
-  const theme = getTheme(scheme === 'dark');
+  const isDark = scheme === 'dark';
+  const theme = getTheme(isDark);
   const { isLoggedIn, decrementUnreadCount } = useAuth();
   
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -112,7 +113,7 @@ export default function Notifications() {
 
   if (!isLoggedIn) {
     return (
-      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+      <View style={[styles.centerContainer, { backgroundColor: isDark ? theme.background : 'transparent' }]}> 
         <Ionicons name="notifications-off-outline" size={64} color={theme.textDisabled} />
         <Text numberOfLines={1} style={[styles.emptyTitle, { color: theme.textSecondary, marginTop: spacing.md }]}>Login Required</Text>
         <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>Please login to view promo notifications.</Text>
@@ -121,7 +122,7 @@ export default function Notifications() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: isDark ? theme.background : 'transparent' }]}> 
       {/* LIST */}
       {loading ? (
         <View style={styles.centerContainer}>
