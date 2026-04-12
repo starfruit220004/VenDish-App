@@ -3,6 +3,7 @@ import {View,Text,StyleSheet,ScrollView,useColorScheme,TouchableOpacity,Linking,
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../../api/api';
+import CollapsibleSection from './CollapsibleSection';
 
 type AboutApiRecord = {
   id?: number;
@@ -141,49 +142,22 @@ export default function AboutTab() {
         Authentic Filipino Cuisine
       </Text>
 
-      {/* About Section */}
-      <View
-        style={[
-          styles.section,
-          { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' },
-        ]}
-      >
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          Our Story
-        </Text>
+      <CollapsibleSection title="Our Story">
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
           Founded in 2015, Kuya Vince Carenderia has been serving delicious, homestyle Filipino meals to the community of Zamboanga. What started as a small family-run eatery has grown into a beloved local institution, known for our authentic recipes passed down through generations.
         </Text>
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242', marginTop: 12 }]}>
           We pride ourselves on using fresh, locally-sourced ingredients and traditional cooking methods to bring you the taste of home-cooked Filipino comfort food.
         </Text>
-      </View>
+      </CollapsibleSection>
 
-      {/* Mission Section */}
-      <View
-        style={[
-          styles.section,
-          { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' },
-        ]}
-      >
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          Our Mission
-        </Text>
+      <CollapsibleSection title="Our Mission">
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
           To serve affordable, delicious Filipino meals that bring families and friends together, while preserving and celebrating our rich culinary heritage.
         </Text>
-      </View>
+      </CollapsibleSection>
 
-      {/* Location Section */}
-      <View
-        style={[
-          styles.section,
-          { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' },
-        ]}
-      >
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          <Ionicons name="location" size={20} /> Location
-        </Text>
+      <CollapsibleSection title="Location">
         {loadingInfo ? (
           <ActivityIndicator size="small" color={isDarkMode ? '#FF5252' : '#B71C1C'} />
         ) : (
@@ -191,18 +165,9 @@ export default function AboutTab() {
             {info.location}
           </Text>
         )}
-      </View>
+      </CollapsibleSection>
 
-      {/* Hours Section */}
-      <View
-        style={[
-          styles.section,
-          { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' },
-        ]}
-      >
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          <Ionicons name="time" size={20} /> Operating Hours
-        </Text>
+      <CollapsibleSection title="Operating Hours">
         <View style={styles.hoursContainer}>
           {loadingInfo ? (
             <ActivityIndicator size="small" color={isDarkMode ? '#FF5252' : '#B71C1C'} />
@@ -212,19 +177,9 @@ export default function AboutTab() {
             </Text>
           )}
         </View>
-      </View>
+      </CollapsibleSection>
 
-      {/* Contact Section */}
-      <View
-        style={[
-          styles.section,
-          { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' },
-        ]}
-      >
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          Get In Touch
-        </Text>
-        
+      <CollapsibleSection title="Get In Touch" defaultExpanded>
         <TouchableOpacity
           style={styles.contactButton}
           onPress={() => handleContact('phone')}
@@ -254,7 +209,7 @@ export default function AboutTab() {
             </Text>
           )}
         </TouchableOpacity>
-      </View>
+      </CollapsibleSection>
 
       {/* App Version */}
       <View style={styles.versionContainer}>
@@ -281,7 +236,7 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 5,
   },
   title: {
     fontSize: 28,
@@ -294,21 +249,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
     fontStyle: 'italic',
-  },
-  section: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 12,
   },
   sectionText: {
     fontSize: 15,

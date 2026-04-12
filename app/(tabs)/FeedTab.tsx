@@ -1,5 +1,20 @@
-import React, { useCallback, useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, TextInput, useColorScheme, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  TouchableOpacity, 
+  Image, 
+  StyleSheet, 
+  TextInput, 
+  useColorScheme, 
+  ActivityIndicator, 
+  RefreshControl, 
+  NativeScrollEvent, 
+  NativeSyntheticEvent,
+  Modal,
+  Platform
+} from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +27,9 @@ import { Food, FeedStackParamList } from '../types';
 import api from '../../api/api';
 import { getTheme, spacing, typography, radii, layout, palette } from '../../constants/theme';
 
+const FEED_PAGE_SIZE = 8;
+const FEED_SCROLL_TOP_THRESHOLD = 550;
+
 function FeedHome({ navigation }: any) {
   const { isFavorite } = useFavorites();
   const { refreshReviews } = useReviews();
@@ -23,6 +41,10 @@ function FeedHome({ navigation }: any) {
   const [apiCategories, setApiCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [visibleFoodCount, setVisibleFoodCount] = useState(FEED_PAGE_SIZE);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const feedListRef = useRef<FlatList<Food> | null>(null);
 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState('All');
@@ -48,8 +70,7 @@ function FeedHome({ navigation }: any) {
         image: item.image ? { uri: item.image } : require('../../assets/images/Logo2.jpg'),
         category: item.category,
         price: Number(item.price),
-        servings: Number(item.stock_quantity ?? 0),
-        isAvailable: item.is_available,
+        isAvailable: item.is_available, 
       }));
       setFoods(mappedFoods);
     } catch (error) {
@@ -70,6 +91,8 @@ function FeedHome({ navigation }: any) {
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
+      setVisibleFoodCount(FEED_PAGE_SIZE);
+      setShowScrollTop(false);
       await Promise.all([fetchFoods(), fetchCategories(), refreshReviews()]);
     } finally {
       setIsRefreshing(false);
@@ -86,9 +109,36 @@ function FeedHome({ navigation }: any) {
     return matchesSearch && matchesCategory;
   });
 
-  const getStatusDisplay = (isAvailable: boolean, servings: number) => {
-    if (!isAvailable || servings <= 0) return { text: 'Unavailable', color: palette.error };
-    if (servings < 10) return { text: 'Limited', color: palette.warning };
+  useEffect(() => {
+    setVisibleFoodCount(FEED_PAGE_SIZE);
+    setShowScrollTop(false);
+  }, [searchQuery, selectedCategory, foods.length]);
+
+  const displayedFoods = useMemo(
+    () => filteredFoods.slice(0, visibleFoodCount),
+    [filteredFoods, visibleFoodCount]
+  );
+
+  const hasMoreFoods = displayedFoods.length < filteredFoods.length;
+
+  const loadMoreFoods = useCallback(() => {
+    if (!hasMoreFoods) return;
+    setVisibleFoodCount((prev) => Math.min(prev + FEED_PAGE_SIZE, filteredFoods.length));
+  }, [hasMoreFoods, filteredFoods.length]);
+
+  const handleFeedScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const shouldShow = offsetY > FEED_SCROLL_TOP_THRESHOLD;
+    setShowScrollTop((prev) => (prev === shouldShow ? prev : shouldShow));
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    feedListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    setShowScrollTop(false);
+  }, []);
+
+  const getStatusDisplay = (isAvailable: boolean) => {
+    if (!isAvailable) return { text: 'Unavailable', color: palette.error };
     return { text: 'Available', color: palette.success };
   };
 
@@ -100,67 +150,190 @@ function FeedHome({ navigation }: any) {
     );
   }
 
-  return (
-    <ScrollView
-      style={[styles.scroll, { backgroundColor: isDark ? theme.background : 'transparent' }]}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={isRefreshing}
-          onRefresh={onRefresh}
-          colors={[theme.accent]}
-          tintColor={theme.accent}
-        />
-      }
-    >
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <View style={styles.header}>
-        <View style={[styles.headerLogoWrap, { backgroundColor: theme.accentSoft }]}>
-          <Image
-            source={require('../../assets/images/Logo2.jpg')}
-            style={styles.headerLogo}
-          />
-        </View>
-        <Text style={[styles.title, { color: theme.accentText }]}>
-          Kuya Vince Carenderia
-        </Text>
-        <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-          Discover your favorite Filipino dishes
-        </Text>
-      </View>
+  const renderFoodItem = ({ item: food }: { item: Food }) => {
+    const status = getStatusDisplay(food.isAvailable);
 
-      {/* ── Search + Filter ────────────────────────────────────── */}
-      <View style={styles.searchContainer}>
-        <View style={[styles.searchBar, { backgroundColor: theme.surface, ...theme.cardShadow }]}>
-          <Ionicons name="search" size={18} color={theme.textMuted} style={{ marginRight: spacing.sm }} />
-          <TextInput
-            placeholder="Search food..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            style={[styles.searchInput, { color: theme.textPrimary }]}
-            placeholderTextColor={theme.textDisabled}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close-circle" size={18} color={theme.textMuted} />
-            </TouchableOpacity>
+    return (
+      <TouchableOpacity
+        style={[
+          styles.card,
+          { width: layout.cardWidth, backgroundColor: theme.surface },
+          theme.cardShadow,
+        ]}
+        onPress={() => navigation.navigate('FoodDetail', { food })}
+        activeOpacity={0.85}
+      >
+        <View style={styles.imageContainer}>
+          <Image source={food.image} style={styles.image} resizeMode="cover" />
+
+          {isFavorite(food.id) && (
+            <View style={[styles.favoriteBadge, { backgroundColor: theme.accent }]}> 
+              <Ionicons name="heart" size={12} color="#FFFFFF" />
+            </View>
           )}
+
+          <View style={[styles.stockBadge, { backgroundColor: status.color }]}> 
+            <Text style={styles.stockText}>{status.text}</Text>
+          </View>
         </View>
 
-        <TouchableOpacity
-          style={[styles.filterButton, { backgroundColor: theme.accent }]}
-          onPress={() => setShowFilter(!showFilter)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="options-outline" size={18} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+        <View style={styles.cardContent}>
+          <View style={styles.cardTopRow}>
+            <View style={styles.cardTextColumn}>
+              <Text
+                style={[styles.foodName, { color: theme.textPrimary }]}
+                numberOfLines={2}
+              >
+                {food.name}
+              </Text>
+            </View>
+            <Text style={[styles.priceValue, { color: theme.accent }]}> 
+              ₱{food.price.toFixed(0)}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
-      {/* ── Category Chips ─────────────────────────────────────── */}
-      {showFilter && (
-        <View style={[styles.filterDropdown, { backgroundColor: theme.surface, ...theme.cardShadow }]}>
-          <View style={styles.chipRow}>
+  return (
+    <>
+      <FlatList
+        ref={feedListRef}
+        style={[styles.scroll, { backgroundColor: isDark ? theme.background : 'transparent' }]}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        data={displayedFoods}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        renderItem={renderFoodItem}
+        onEndReached={loadMoreFoods}
+        onEndReachedThreshold={0.35}
+        onScroll={handleFeedScroll}
+        scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={[theme.accent]}
+            tintColor={theme.accent}
+          />
+        }
+        ListHeaderComponent={
+          <>
+            <View style={styles.header}>
+              <View style={[styles.headerLogoWrap, { backgroundColor: theme.accentSoft }]}> 
+                <Image
+                  source={require('../../assets/images/Logo2.jpg')}
+                  style={styles.headerLogo}
+                />
+              </View>
+              <Text style={[styles.title, { color: theme.accentText }]}> 
+                Kuya Vince Carenderia
+              </Text>
+              <Text style={[styles.subtitle, { color: theme.textMuted }]}> 
+                Discover your favorite Filipino dishes
+              </Text>
+            </View>
+
+            <View style={styles.searchContainer}>
+              <View style={[styles.searchBar, { backgroundColor: theme.surface }, theme.cardShadow]}> 
+                <Ionicons name="search" size={18} color={theme.textMuted} style={{ marginRight: spacing.sm }} />
+                <TextInput
+                  placeholder="Search food..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  style={[styles.searchInput, { color: theme.textPrimary }]}
+                  placeholderTextColor={theme.textDisabled}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterButton, 
+                  { backgroundColor: showFilter || selectedCategory !== 'All' ? theme.accent : theme.surface },
+                  (showFilter || selectedCategory === 'All') && theme.cardShadow
+                ]}
+                onPress={() => setShowFilter(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="options-outline" size={20} color={showFilter || selectedCategory !== 'All' ? '#FFFFFF' : theme.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Active Category Display */}
+            {selectedCategory !== 'All' && (
+              <View style={styles.activeFilterRow}>
+                <TouchableOpacity
+                  style={[styles.activeFilterChip, { backgroundColor: theme.accentSoft }]}
+                  onPress={() => setSelectedCategory('All')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.activeFilterText, { color: theme.accent }]}>{selectedCategory}</Text>
+                  <Ionicons name="close" size={14} color={theme.accent} />
+                </TouchableOpacity>
+                <Text style={[styles.resultCount, { color: theme.textMuted }]}> 
+                  {filteredFoods.length} {filteredFoods.length === 1 ? 'item' : 'items'}
+                </Text>
+              </View>
+            )}
+            
+            {/* If All is selected, still show result count cleanly */}
+            {selectedCategory === 'All' && (
+              <View style={[styles.activeFilterRow, { justifyContent: 'flex-end' }]}>
+                <Text style={[styles.resultCount, { color: theme.textMuted }]}> 
+                  {filteredFoods.length} {filteredFoods.length === 1 ? 'item' : 'items'}
+                </Text>
+              </View>
+            )}
+          </>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="search-outline" size={48} color={theme.textDisabled} />
+            <Text style={[styles.emptyTitle, { color: theme.textSecondary }]}>No dishes found</Text>
+            <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}> 
+              Try adjusting your search or filters
+            </Text>
+          </View>
+        }
+        ListFooterComponent={
+          hasMoreFoods ? (
+            <View style={styles.paginationHint}>
+              <Text style={[styles.paginationHintText, { color: theme.textMuted }]}>Loading more dishes as you scroll...</Text>
+            </View>
+          ) : null
+        }
+      />
+
+      {showScrollTop && (
+        <TouchableOpacity
+          style={[styles.scrollTopButton, { backgroundColor: theme.accent }, theme.cardShadowHeavy]}
+          onPress={scrollToTop}
+          activeOpacity={0.9}
+        >
+          <Ionicons name="arrow-up" size={20} color="#FFF" />
+        </TouchableOpacity>
+      )}
+
+      {/* Popover Dropdown Modal */}
+      <Modal visible={showFilter} transparent animationType="fade">
+        <TouchableOpacity 
+          style={styles.popoverOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowFilter(false)}
+        >
+          <View style={[styles.popoverMenu, { backgroundColor: theme.surface }, theme.cardShadowHeavy]}>
+            <Text style={[styles.popoverTitle, { color: theme.textMuted }]}>Select Category</Text>
+            <View style={styles.popoverDivider} />
+            
             {dynamicCategories.map(cat => {
               const isActive = selectedCategory === cat;
               return (
@@ -168,107 +341,28 @@ function FeedHome({ navigation }: any) {
                   key={cat}
                   onPress={() => { setSelectedCategory(cat); setShowFilter(false); }}
                   style={[
-                    styles.chip,
-                    { backgroundColor: isActive ? theme.accent : theme.surfaceElevated },
+                    styles.popoverItem,
+                    isActive && { backgroundColor: theme.accentSoft }
                   ]}
                   activeOpacity={0.7}
                 >
                   <Text style={[
-                    styles.chipText,
-                    { color: isActive ? '#FFFFFF' : theme.textSecondary },
+                    styles.popoverItemText,
+                    { 
+                      color: isActive ? theme.accent : theme.textPrimary,
+                      fontWeight: isActive ? '700' : '500' 
+                    },
                   ]}>
                     {cat}
                   </Text>
+                  {isActive && <Ionicons name="checkmark" size={18} color={theme.accent} />}
                 </TouchableOpacity>
               );
             })}
           </View>
-        </View>
-      )}
-
-      {/* ── Active Filter Indicator ────────────────────────────── */}
-      {selectedCategory !== 'All' && (
-        <View style={styles.activeFilterRow}>
-          <TouchableOpacity
-            style={[styles.activeFilterChip, { backgroundColor: theme.accentSoft }]}
-            onPress={() => setSelectedCategory('All')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.activeFilterText, { color: theme.accent }]}>{selectedCategory}</Text>
-            <Ionicons name="close" size={14} color={theme.accent} />
-          </TouchableOpacity>
-          <Text style={[styles.resultCount, { color: theme.textMuted }]}>
-            {filteredFoods.length} {filteredFoods.length === 1 ? 'item' : 'items'}
-          </Text>
-        </View>
-      )}
-
-      {/* ── Food Grid ──────────────────────────────────────────── */}
-      <View style={styles.row}>
-        {filteredFoods.map(food => {
-          const status = getStatusDisplay(food.isAvailable, food.servings);
-          return (
-            <TouchableOpacity
-              key={food.id}
-              style={[
-                styles.card,
-                { width: layout.cardWidth, backgroundColor: theme.surface },
-                theme.cardShadow,
-              ]}
-              onPress={() => navigation.navigate('FoodDetail', { food })}
-              activeOpacity={0.85}
-            >
-              <View style={styles.imageContainer}>
-                <Image source={food.image} style={styles.image} resizeMode="cover" />
-
-                {/* Gradient overlay at bottom of image for better text readability */}
-                
-
-                {isFavorite(food.id) && (
-                  <View style={[styles.favoriteBadge, { backgroundColor: theme.accent }]}>
-                    <Ionicons name="heart" size={12} color="#FFFFFF" />
-                  </View>
-                )}
-
-                <View style={[styles.stockBadge, { backgroundColor: status.color }]}>
-                  <Text style={styles.stockText}>{status.text}</Text>
-                </View>
-              </View>
-
-              <View style={styles.cardContent}>
-                <View style={styles.cardTopRow}>
-                  <View style={styles.cardTextColumn}>
-                    <Text
-                      style={[styles.foodName, { color: theme.textPrimary }]}
-                      numberOfLines={1}
-                    >
-                      {food.name}
-                    </Text>
-                    <Text style={[styles.servingsValue, { color: theme.textMuted }]}> 
-                      {food.servings} {food.servings === 1 ? 'serving' : 'servings'} left
-                    </Text>
-                  </View>
-                  <Text style={[styles.priceValue, { color: theme.accent }]}> 
-                    ₱{food.price.toFixed(0)}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* ── Empty State ────────────────────────────────────────── */}
-      {filteredFoods.length === 0 && (
-        <View style={styles.emptyState}>
-          <Ionicons name="search-outline" size={48} color={theme.textDisabled} />
-          <Text style={[styles.emptyTitle, { color: theme.textSecondary }]}>No dishes found</Text>
-          <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>
-            Try adjusting your search or filters
-          </Text>
-        </View>
-      )}
-    </ScrollView>
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 }
 
@@ -360,39 +454,19 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
-    height: 44,
+    height: 48,
   },
   searchInput: {
     flex: 1,
-    ...typography.bodyMd,
+    ...typography.bodyLg,
     paddingVertical: 0,
   },
   filterButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-
-  // ── Filter Chips ────────────────────────────────────────────
-  filterDropdown: {
-    padding: spacing.md,
-    borderRadius: radii.lg,
-    marginBottom: spacing.md,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  chip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.full,
-  },
-  chipText: {
-    ...typography.labelMd,
   },
 
   // ── Active Filter ───────────────────────────────────────────
@@ -419,8 +493,6 @@ const styles = StyleSheet.create({
 
   // ── Food Grid ───────────────────────────────────────────────
   row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
   card: {
@@ -428,7 +500,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
-
   },
   imageContainer: {
     position: 'relative',
@@ -437,14 +508,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   image: { width: '100%', height: '100%' },
-  imageGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 40,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-  },
   favoriteBadge: {
     position: 'absolute',
     top: spacing.sm,
@@ -476,7 +539,7 @@ const styles = StyleSheet.create({
   cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   cardTextColumn: {
     flex: 1,
@@ -484,15 +547,10 @@ const styles = StyleSheet.create({
   },
   foodName: {
     ...typography.headingSm,
-    marginBottom: spacing.xxs,
   },
   priceValue: {
     ...typography.headingMd,
     textAlign: 'right',
-  },
-  servingsValue: {
-    ...typography.bodySm,
-    marginTop: spacing.xxs,
   },
 
   // ── Empty State ─────────────────────────────────────────────
@@ -505,6 +563,64 @@ const styles = StyleSheet.create({
     ...typography.headingMd,
   },
   emptySubtitle: {
+    ...typography.bodyMd,
+  },
+  paginationHint: {
+    alignItems: 'center',
+    paddingTop: spacing.md,
+  },
+  paginationHintText: {
+    ...typography.bodySm,
+  },
+  scrollTopButton: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing['5xl'],
+    width: 46,
+    height: 46,
+    borderRadius: radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // ── Popover Menu ────────────────────────────────────────────
+  popoverOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  popoverMenu: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 220 : 200, // Anchored just below the search bar
+    right: spacing.lg,
+    width: 220,
+    borderRadius: radii.xl,
+    padding: spacing.xs,
+    zIndex: 100,
+  },
+  popoverTitle: {
+    ...typography.caption,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  popoverDivider: {
+    height: 1,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    marginHorizontal: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  popoverItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.lg,
+    marginBottom: 2,
+  },
+  popoverItemText: {
     ...typography.bodyMd,
   },
 });

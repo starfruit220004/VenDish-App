@@ -1,10 +1,82 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {View,Text,StyleSheet,ScrollView,useColorScheme,} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import api from '../../api/api';
+import CollapsibleSection from './CollapsibleSection';
+
+type ContactApiRecord = {
+  id?: number;
+  phone_number?: string;
+  email?: string;
+  address?: string;
+};
+
+type AboutApiRecord = {
+  id?: number;
+  open_hours?: string;
+};
+
+const DEFAULT_CONTACT_INFO = {
+  email: 'kuyavince@gmail.com',
+  phone: '+63 123 456 7890',
+  location: 'Zamboanga, Philippines',
+  operatingHours: 'Everyday: 7:00 AM – 10:00 PM',
+};
+
+const getLatestRecord = <T extends object>(
+  data: T[] | T | null | undefined
+): T | null => {
+  if (Array.isArray(data)) {
+    return data[data.length - 1] || null;
+  }
+  if (data && typeof data === 'object') {
+    return data;
+  }
+  return null;
+};
 
 export default function TermsAndConditions() {
   const scheme = useColorScheme();
   const isDarkMode = scheme === 'dark';
+  const [contactInfo, setContactInfo] = useState(DEFAULT_CONTACT_INFO);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+
+      const fetchContactInfo = async () => {
+        try {
+          const [contactResponse, aboutResponse] = await Promise.all([
+            api.get('/firstapp/contact-page/'),
+            api.get('/firstapp/about/'),
+          ]);
+
+          const contactData = getLatestRecord<ContactApiRecord>(contactResponse.data);
+          const aboutData = getLatestRecord<AboutApiRecord>(aboutResponse.data);
+
+          if (!isMounted) {
+            return;
+          }
+
+          setContactInfo((prev) => ({
+            email: contactData?.email || prev.email,
+            phone: contactData?.phone_number || prev.phone,
+            location: contactData?.address || prev.location,
+            operatingHours: aboutData?.open_hours || prev.operatingHours,
+          }));
+        } catch (error) {
+          console.error('Failed to fetch Terms contact info:', error);
+        }
+      };
+
+      fetchContactInfo();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
 
   return (
     <ScrollView
@@ -42,90 +114,59 @@ export default function TermsAndConditions() {
         Last Updated: November 19, 2024
       </Text>
 
-      
-      <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          1. Acceptance of Terms
-        </Text>
+      <CollapsibleSection title="1. Acceptance of Terms">
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
           By accessing and using the Kuya Vince Carenderia mobile application, you accept and agree to be bound by these Terms and Conditions.
         </Text>
-      </View>
+      </CollapsibleSection>
 
-     
-      <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          2. Use of Service
-        </Text>
+      <CollapsibleSection title="2. Use of Service">
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
           You agree to use our app only for lawful purposes and in accordance with these Terms.
         </Text>
-      </View>
+      </CollapsibleSection>
 
-      
-      <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          3. User Accounts
-        </Text>
+      <CollapsibleSection title="3. User Accounts">
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
           You are responsible for maintaining the confidentiality of your account credentials.
         </Text>
-      </View>
+      </CollapsibleSection>
 
-      
-      <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          4. Promotions and Discounts
-        </Text>
+      <CollapsibleSection title="4. Promotions and Discounts">
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
           Promotional offers are subject to specific terms and conditions and may change at any time.
         </Text>
-      </View>
+      </CollapsibleSection>
 
-      
-      <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          5. Food Safety and Allergies
-        </Text>
+      <CollapsibleSection title="5. Food Safety and Allergies">
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
           We cannot guarantee that our products are free from allergens.
         </Text>
-      </View>
+      </CollapsibleSection>
 
-     
-      <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          6. Intellectual Property
-        </Text>
+      <CollapsibleSection title="6. Intellectual Property">
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
           All content on this app is the property of Kuya Vince Carenderia.
         </Text>
-      </View>
+      </CollapsibleSection>
 
-      
-      <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          7. Limitation of Liability
-        </Text>
+      <CollapsibleSection title="7. Limitation of Liability">
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
           We are not liable for indirect or consequential damages.
         </Text>
-      </View>
+      </CollapsibleSection>
 
-     
-      <View style={[styles.section, { backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF' }]}>
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          8. Contact Information
-        </Text>
+      <CollapsibleSection title="8. Contact Information" defaultExpanded>
         <Text style={[styles.sectionText, { color: isDarkMode ? '#E0E0E0' : '#424242' }]}>
           For questions about these Terms, contact us:
         </Text>
         <Text style={[styles.contactText, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          Email: kuyavince@gmail.com{'\n'}
-          Phone: +63 123 456 7890{'\n'}
-          Address: Zamboanga, Philippines
+          Email: {contactInfo.email}{'\n'}
+          Phone: {contactInfo.phone}{'\n'}
+          Location: {contactInfo.location}{'\n'}
+          Operating Hours: {contactInfo.operatingHours}
         </Text>
-      </View>
+      </CollapsibleSection>
 
       <View style={styles.bottomSpace} />
     </ScrollView>
@@ -135,20 +176,9 @@ export default function TermsAndConditions() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   contentContainer: { padding: 20 },
-  iconContainer: { alignItems: 'center', marginVertical: 20 },
+  iconContainer: { alignItems: 'center', marginVertical: 5 },
   title: { fontSize: 28, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 },
   lastUpdated: { fontSize: 14, textAlign: 'center', marginBottom: 24 },
-  section: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
   sectionText: { fontSize: 15, lineHeight: 22 },
   contactText: { fontSize: 15, lineHeight: 22, marginTop: 8, fontWeight: '600' },
   bottomSpace: { height: 40 },

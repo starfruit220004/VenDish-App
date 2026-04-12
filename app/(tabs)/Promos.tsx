@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   View, 
   Text, 
-  ScrollView, 
+  FlatList,
   TouchableOpacity, 
   StyleSheet, 
   useColorScheme, 
   Modal,
   ActivityIndicator,
   RefreshControl,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -28,6 +30,9 @@ type DrawerParamList = {
 };
 
 type PromoNavigationProp = DrawerNavigationProp<DrawerParamList>;
+
+const PROMOS_PAGE_SIZE = 6;
+const PROMOS_SCROLL_TOP_THRESHOLD = 550;
 
 export default function Promos() {
   const scheme = useColorScheme();
@@ -74,8 +79,12 @@ export default function Promos() {
   };
 
   const [promos, setPromos] = useState<Coupon[]>([]);
+  const [visiblePromoCount, setVisiblePromoCount] = useState(PROMOS_PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const promosListRef = useRef<FlatList<Coupon> | null>(null);
 
   // Modals
   const [authModalVisible, setAuthModalVisible] = useState(false);
@@ -134,9 +143,44 @@ export default function Promos() {
     fetchCoupons();
   }, []);
 
+  useEffect(() => {
+    setVisiblePromoCount(PROMOS_PAGE_SIZE);
+    setShowScrollTop(false);
+  }, [promos]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    setVisiblePromoCount(PROMOS_PAGE_SIZE);
+    setShowScrollTop(false);
     fetchCoupons();
+  }, []);
+
+  const visiblePromos = useMemo(
+    () => promos.filter((promo) => !dismissedPromoIds.includes(promo.id)),
+    [promos, dismissedPromoIds]
+  );
+
+  const displayedPromos = useMemo(
+    () => visiblePromos.slice(0, visiblePromoCount),
+    [visiblePromos, visiblePromoCount]
+  );
+
+  const hasMorePromos = displayedPromos.length < visiblePromos.length;
+
+  const loadMorePromos = useCallback(() => {
+    if (!hasMorePromos) return;
+    setVisiblePromoCount((prev) => Math.min(prev + PROMOS_PAGE_SIZE, visiblePromos.length));
+  }, [hasMorePromos, visiblePromos.length]);
+
+  const handlePromosScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const shouldShow = offsetY > PROMOS_SCROLL_TOP_THRESHOLD;
+    setShowScrollTop((prev) => (prev === shouldShow ? prev : shouldShow));
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    promosListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    setShowScrollTop(false);
   }, []);
 
   const handleClaimPromo = async (promo: Coupon) => {
@@ -223,6 +267,99 @@ export default function Promos() {
     return `${str} OFF`;
   };
 
+  const renderPromoCard = ({ item: promo }: { item: Coupon }) => {
+    const isLocallyClaimed = claimedCoupons.some(c => c.id === promo.id);
+    const status = promo.status ? promo.status.toLowerCase() : 'active';
+
+    const isRedeemed = status === 'redeemed';
+    const isExpired = status === 'expired';
+    const isClaimed = status === 'claimed' || isLocallyClaimed;
+    const isFullyClaimedGlobal =
+      promo.claim_limit != null &&
+      (promo.times_claimed ?? 0) >= promo.claim_limit;
+
+    const isUnavailable = isRedeemed || isClaimed || isExpired || isFullyClaimedGlobal;
+
+    let buttonText = 'Claim Now';
+    let iconName: keyof typeof Ionicons.glyphMap = 'checkmark-circle-outline';
+
+    if (isExpired) { buttonText = 'Expired'; iconName = 'time-sharp'; }
+    else if (isRedeemed) { buttonText = 'Redeemed'; iconName = 'checkmark-circle-sharp'; }
+    else if (isClaimed) { buttonText = 'Claimed'; iconName = 'checkmark-circle-sharp'; }
+    else if (isFullyClaimedGlobal) { buttonText = 'Fully Claimed'; iconName = 'people-circle-outline'; }
+    else if (!isLoggedIn) { buttonText = 'Login to Claim'; iconName = 'lock-closed'; }
+
+    return (
+      <View
+        style={[
+          styles.promoCard,
+          { backgroundColor: theme.surface },
+          theme.cardShadow,
+          isExpired && { opacity: 0.6 },
+        ]}
+      >
+        {isExpired && (
+          <TouchableOpacity
+            style={styles.promoDismissBtn}
+            onPress={() => dismissExpiredPromo(promo.id)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close-circle" size={22} color={theme.textMuted} />
+          </TouchableOpacity>
+        )}
+
+        <View style={[
+          styles.discountBadge,
+          { backgroundColor: isExpired ? theme.textMuted : theme.accent },
+        ]}>
+          <Text numberOfLines={1} style={styles.discountText}>
+            {isExpired ? 'EXPIRED' : formatRate(promo.rate)}
+          </Text>
+        </View>
+
+        <View style={styles.promoInfo}>
+          <Text style={[styles.promoTitle, { color: theme.accentText }]}>
+            {promo.product_name}
+          </Text>
+
+          <Text style={[styles.promoSubtitle, { color: theme.textPrimary }]}>
+            {promo.name}
+          </Text>
+
+          <Text style={[styles.promoDesc, { color: theme.textMuted }]}>
+            {promo.description}
+          </Text>
+
+          <View style={[styles.detailsContainer, { borderTopColor: theme.borderSubtle }]}> 
+            <View style={styles.detailRow}>
+              <Ionicons name="information-circle-outline" size={15} color={theme.textMuted} />
+              <Text style={[styles.termsText, { color: theme.textMuted }]}>{promo.terms}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Ionicons name="time-outline" size={15} color={theme.textMuted} />
+              <Text numberOfLines={1} style={[styles.expiryText, { color: theme.textMuted }]}> 
+                {isExpired ? 'Expired on: ' : 'Expires: '}{formatDate(promo.expiration)}
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.claimButton,
+              { backgroundColor: isUnavailable ? theme.textDisabled : (!isLoggedIn ? theme.textMuted : theme.accent) },
+            ]}
+            onPress={() => !isUnavailable && handleClaimPromo(promo)}
+            activeOpacity={0.85}
+            disabled={isUnavailable}
+          >
+            <Text numberOfLines={1} style={styles.claimButtonText}>{buttonText}</Text>
+            <Ionicons name={iconName} size={18} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   if (loading) {
     return (
       <View style={[styles.centerContainer, { backgroundColor: isDark ? theme.background : 'transparent' }]}>
@@ -232,159 +369,94 @@ export default function Promos() {
   }
 
   return (
-    <ScrollView 
-      style={[styles.scroll, { backgroundColor: isDark ? theme.background : 'transparent' }]} 
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.accent]} />
-      }
-    >
-      <View style={styles.headerContainer}>
-        <Text numberOfLines={1} style={[styles.header, { color: theme.accentText }]}>
-          Available Promos
-        </Text>
-        <Text style={[styles.subheader, { color: theme.textMuted }]}>
-          {isLoggedIn 
-            ? `Welcome ${userData?.username || 'back'}! Tap to claim your exclusive deals!` 
-            : 'Login or sign up to claim exclusive deals'}
-        </Text>
-      </View>
-
-      {promos.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="ticket-outline" size={48} color={theme.textDisabled} />
-          <Text style={[styles.emptyTitle, { color: theme.textSecondary }]}>No active promos</Text>
-          <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>Check back soon for exclusive deals!</Text>
-        </View>
-      ) : (
-        promos.filter(promo => !dismissedPromoIds.includes(promo.id)).map(promo => {
-          const isLocallyClaimed = claimedCoupons.some(c => c.id === promo.id);
-          const status = promo.status ? promo.status.toLowerCase() : 'active';
-
-          const isRedeemed = status === 'redeemed';
-          const isExpired = status === 'expired';
-          const isClaimed = status === 'claimed' || isLocallyClaimed;
-          
-          // +++ NEW: Check if global claims have reached the limit +++
-          const isFullyClaimedGlobal = 
-            promo.claim_limit != null && 
-            (promo.times_claimed ?? 0) >= promo.claim_limit;
-
-          // +++ UPDATE: Add isFullyClaimedGlobal to the unavailable check +++
-          const isUnavailable = isRedeemed || isClaimed || isExpired || isFullyClaimedGlobal;
-
-          let buttonText = 'Claim Now';
-          let iconName: keyof typeof Ionicons.glyphMap = 'checkmark-circle-outline';
-
-          if (isExpired) { buttonText = 'Expired'; iconName = 'time-sharp'; }
-          else if (isRedeemed) { buttonText = 'Redeemed'; iconName = 'checkmark-circle-sharp'; }
-          else if (isClaimed) { buttonText = 'Claimed'; iconName = 'checkmark-circle-sharp'; }
-          // +++ NEW: Fully Claimed button state +++
-          else if (isFullyClaimedGlobal) { buttonText = 'Fully Claimed'; iconName = 'people-circle-outline'; }
-          else if (!isLoggedIn) { buttonText = 'Login to Claim'; iconName = 'lock-closed'; }
-
-          return (
-            <View
-              key={promo.id}
-              style={[
-                styles.promoCard,
-                { backgroundColor: theme.surface },
-                theme.cardShadow,
-                isExpired && { opacity: 0.6 },
-              ]}
-            >
-              {isExpired && (
-                <TouchableOpacity
-                  style={styles.promoDismissBtn}
-                  onPress={() => dismissExpiredPromo(promo.id)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name="close-circle" size={22} color={theme.textMuted} />
-                </TouchableOpacity>
+    <>
+      <FlatList
+        ref={promosListRef}
+        style={[styles.scroll, { backgroundColor: isDark ? theme.background : 'transparent' }]}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        data={displayedPromos}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderPromoCard}
+        onEndReached={loadMorePromos}
+        onEndReachedThreshold={0.35}
+        onScroll={handlePromosScroll}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.accent]} />
+        }
+        ListHeaderComponent={
+          <View style={styles.headerContainer}>
+            <Text numberOfLines={1} style={[styles.header, { color: theme.accentText }]}> 
+              Available Promos
+            </Text>
+            <Text style={[styles.subheader, { color: theme.textMuted }]}> 
+              {isLoggedIn ? (
+                <>
+                  Welcome <Text style={{ fontWeight: 'bold' }}>{userData?.username || 'back'}</Text>! Tap to claim your exclusive deals!
+                </>
+              ) : (
+                'Login or sign up to claim exclusive deals'
               )}
-
-              <View style={[
-                styles.discountBadge,
-                { backgroundColor: isExpired ? theme.textMuted : theme.accent },
-              ]}>
-                <Text numberOfLines={1} style={styles.discountText}>
-                  {isExpired ? 'EXPIRED' : formatRate(promo.rate)}
-                </Text>
+            </Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="ticket-outline" size={48} color={theme.textDisabled} />
+            <Text style={[styles.emptyTitle, { color: theme.textSecondary }]}>No active promos</Text>
+            <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>Check back soon for exclusive deals!</Text>
+          </View>
+        }
+        ListFooterComponent={
+          <>
+            {hasMorePromos && (
+              <View style={styles.paginationHint}>
+                <Text style={[styles.paginationHintText, { color: theme.textMuted }]}>Loading more promos as you scroll...</Text>
               </View>
+            )}
 
-              <View style={styles.promoInfo}>
-                <Text style={[styles.promoTitle, { color: theme.accentText }]}>
-                  {promo.product_name}
-                </Text>
-
-                <Text style={[styles.promoSubtitle, { color: theme.textPrimary }]}>
-                  {promo.name}
-                </Text>
-
-                <Text style={[styles.promoDesc, { color: theme.textMuted }]}>
-                  {promo.description}
-                </Text>
-
-                <View style={[styles.detailsContainer, { borderTopColor: theme.borderSubtle }]}>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="information-circle-outline" size={15} color={theme.textMuted} />
-                    <Text style={[styles.termsText, { color: theme.textMuted }]}>{promo.terms}</Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="time-outline" size={15} color={theme.textMuted} />
-                    <Text numberOfLines={1} style={[styles.expiryText, { color: theme.textMuted }]}>
-                      {isExpired ? 'Expired on: ' : 'Expires: '}{formatDate(promo.expiration)}
-                    </Text>
-                  </View>
+            {!isLoggedIn && (
+              <View style={[styles.infoBanner, { backgroundColor: theme.surfaceElevated }, theme.cardShadow]}>
+                <View style={[styles.infoBannerIconWrap, { backgroundColor: theme.accentSoft }]}> 
+                  <Ionicons name="lock-closed" size={24} color={theme.accent} />
                 </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.claimButton,
-                    { backgroundColor: isUnavailable ? theme.textDisabled : (!isLoggedIn ? theme.textMuted : theme.accent) },
-                  ]}
-                  onPress={() => !isUnavailable && handleClaimPromo(promo)}
-                  activeOpacity={0.85}
-                  disabled={isUnavailable}
-                >
-                  <Text numberOfLines={1} style={styles.claimButtonText}>{buttonText}</Text>
-                  <Ionicons name={iconName} size={18} color="#FFF" />
-                </TouchableOpacity>
+                <View style={styles.infoBannerText}>
+                  <Text numberOfLines={1} style={[styles.infoBannerTitle, { color: theme.accentText }]}> 
+                    Account Required
+                  </Text>
+                  <Text style={[styles.infoBannerDesc, { color: theme.textMuted }]}> 
+                    Create an account or log in to unlock exclusive deals!
+                  </Text>
+                </View>
+                <View style={styles.bannerButtonContainer}>
+                  <TouchableOpacity
+                    style={[styles.loginBannerButton, { borderColor: theme.accent }]}
+                    onPress={() => navigation.navigate('Login', {})}
+                  >
+                    <Text style={[styles.loginBannerButtonText, { color: theme.accent }]}>Login</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.signupBannerButton, { backgroundColor: theme.accent }]}
+                    onPress={() => navigation.navigate('Signup', {})}
+                  >
+                    <Text numberOfLines={1} style={styles.signupBannerButtonText}>Sign Up</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          );
-        })
-      )}
+            )}
+          </>
+        }
+      />
 
-      {!isLoggedIn && (
-        <View style={[styles.infoBanner, { backgroundColor: theme.surfaceElevated }, theme.cardShadow]}>
-          <View style={[styles.infoBannerIconWrap, { backgroundColor: theme.accentSoft }]}>
-            <Ionicons name="lock-closed" size={24} color={theme.accent} />
-          </View>
-          <View style={styles.infoBannerText}>
-            <Text numberOfLines={1} style={[styles.infoBannerTitle, { color: theme.accentText }]}>
-              Account Required
-            </Text>
-            <Text style={[styles.infoBannerDesc, { color: theme.textMuted }]}>
-              Create an account or log in to unlock exclusive deals!
-            </Text>
-          </View>
-          <View style={styles.bannerButtonContainer}>
-            <TouchableOpacity 
-              style={[styles.loginBannerButton, { borderColor: theme.accent }]}
-              onPress={() => navigation.navigate('Login', {})}
-            >
-              <Text style={[styles.loginBannerButtonText, { color: theme.accent }]}>Login</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.signupBannerButton, { backgroundColor: theme.accent }]}
-              onPress={() => navigation.navigate('Signup', {})}
-            >
-              <Text numberOfLines={1} style={styles.signupBannerButtonText}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+      {showScrollTop && (
+        <TouchableOpacity
+          style={[styles.scrollTopButton, { backgroundColor: theme.accent }, theme.cardShadowHeavy]}
+          onPress={scrollToTop}
+          activeOpacity={0.9}
+        >
+          <Ionicons name="arrow-up" size={20} color="#FFF" />
+        </TouchableOpacity>
       )}
       
       <Modal visible={authModalVisible} transparent animationType="fade">
@@ -446,7 +518,7 @@ export default function Promos() {
         actions={feedbackModal.actions}
         onClose={closeFeedback}
       />
-    </ScrollView>
+    </>
   );
 }
 
@@ -592,4 +664,22 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...typography.headingMd },
   emptySubtitle: { ...typography.bodyMd },
+  paginationHint: {
+    alignItems: 'center',
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  paginationHintText: {
+    ...typography.bodySm,
+  },
+  scrollTopButton: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing['5xl'],
+    width: 46,
+    height: 46,
+    borderRadius: radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

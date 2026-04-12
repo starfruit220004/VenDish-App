@@ -62,7 +62,53 @@ function CustomDrawerContent(props: CustomDrawerContentProps) {
   const { isLoggedIn, logout } = useAuth();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  const settingsItems: {
+    screen: 'PrivacyPolicy' | 'TermsAndConditions' | 'About';
+    label: string;
+    icon: React.ComponentProps<typeof Ionicons>['name'];
+  }[] = [
+    {
+      screen: 'PrivacyPolicy',
+      label: 'Privacy Policy',
+      icon: 'shield-checkmark-outline',
+    },
+    {
+      screen: 'TermsAndConditions',
+      label: 'Terms & Conditions',
+      icon: 'document-text-outline',
+    },
+    {
+      screen: 'About',
+      label: 'About VenDish',
+      icon: 'information-circle-outline',
+    },
+  ];
+
   const toggleSettings = () => setSettingsOpen(!settingsOpen);
+
+  const confirmLogout = () => {
+    props.showFeedback(
+      'Logout',
+      'Are you sure you want to log out?',
+      'warning',
+      [
+        { label: 'Cancel', style: 'secondary' },
+        {
+          label: 'Logout',
+          style: 'danger',
+          onPress: async () => {
+            await logout();
+            props.showFeedback('Success', 'You successfully logout.', 'success', [
+              {
+                label: 'OK',
+                onPress: () => props.navigation.navigate('Tabs' as never),
+              },
+            ]);
+          },
+        },
+      ]
+    );
+  };
 
   const handleMenuPress = async (screen: string) => {
     if (screen === 'FAQ') props.navigation.navigate('FAQ' as never);
@@ -70,76 +116,97 @@ function CustomDrawerContent(props: CustomDrawerContentProps) {
     else if (screen === 'PrivacyPolicy') props.navigation.navigate('PrivacyPolicy' as never);
     else if (screen === 'TermsAndConditions') props.navigation.navigate('TermsAndConditions' as never);
     else if (screen === 'About') props.navigation.navigate('About' as never);
-    else if (screen === 'Logout') {
-      await logout();
-      props.showFeedback('Logged out', 'You have been logged out successfully.', 'success');
-      props.navigation.navigate('Tabs' as never);
-    }
+    else if (screen === 'Logout') confirmLogout();
   };
 
   return (
     <DrawerContentScrollView
       {...props}
       contentContainerStyle={[styles.drawerContent, { backgroundColor: theme.surface }]}
+      showsVerticalScrollIndicator={false}
     >
       <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
-        <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
+        
+        {/* Brand Header */}
+        <View style={[styles.brandHeader, { borderBottomColor: theme.borderSubtle }]}>
           <Image
             source={require('../../assets/images/Logo2.jpg')}
-            style={{ width: 140, height: 140, borderRadius: radii.lg }}
+            style={styles.brandLogo}
             resizeMode="contain"
           />
+          <View style={styles.brandTextContainer}>
+            <Text style={[styles.brandTitle, { color: theme.textPrimary }]}>VenDish</Text>
+            <Text style={[styles.brandSubtitle, { color: theme.textMuted }]}>Modern Filipino Dining</Text>
+          </View>
         </View>
 
+        {/* Menu Section */}
         <View style={styles.menuSection}>
+          <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>QUICK ACCESS</Text>
+
           {isLoggedIn && (
-            <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.borderSubtle }]} onPress={() => handleMenuPress('Profile')}>
-              <Ionicons name="person-outline" size={22} color={theme.textMuted} />
-              <Text style={[styles.menuItemText, { color: theme.textPrimary }]}>Profile</Text>
-              <Ionicons name="chevron-forward" size={18} color={theme.textDisabled} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => handleMenuPress('Profile')}
+            >
+              <Ionicons name="person-outline" size={22} color={theme.textPrimary} style={styles.menuIcon} />
+              <Text style={[styles.menuTitle, { color: theme.textPrimary }]}>Profile</Text>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.borderSubtle }]} onPress={() => handleMenuPress('FAQ')}>
-            <Ionicons name="help-circle-outline" size={22} color={theme.textMuted} />
-            <Text style={[styles.menuItemText, { color: theme.textPrimary }]}>FAQ</Text>
-            <Ionicons name="chevron-forward" size={18} color={theme.textDisabled} />
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={() => handleMenuPress('FAQ')}
+          >
+            <Ionicons name="help-buoy-outline" size={22} color={theme.textPrimary} style={styles.menuIcon} />
+            <Text style={[styles.menuTitle, { color: theme.textPrimary }]}>FAQ</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.borderSubtle }]} onPress={toggleSettings}>
-            <Ionicons name="settings-outline" size={22} color={theme.textMuted} />
-            <Text style={[styles.menuItemText, { color: theme.textPrimary }]}>Settings</Text>
+          {/* Settings Group */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={toggleSettings}
+          >
+            <Ionicons name="settings-outline" size={22} color={theme.textPrimary} style={styles.menuIcon} />
+            <Text style={[styles.menuTitle, { color: theme.textPrimary }]}>Settings & Info</Text>
             <Ionicons name={settingsOpen ? 'chevron-up' : 'chevron-down'} size={18} color={theme.textDisabled} />
           </TouchableOpacity>
 
+          {/* Sub Menu Items */}
           {settingsOpen && (
-            <View style={styles.subMenu}>
-              <TouchableOpacity style={styles.subMenuItem} onPress={() => handleMenuPress('PrivacyPolicy')}>
-                <Text style={[styles.subMenuText, { color: theme.textPrimary }]}>Privacy Policy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.subMenuItem} onPress={() => handleMenuPress('TermsAndConditions')}>
-                <Text style={[styles.subMenuText, { color: theme.textPrimary }]}>Terms & Conditions</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.subMenuItem} onPress={() => handleMenuPress('About')}>
-                <Text style={[styles.subMenuText, { color: theme.textPrimary }]}>About</Text>
-              </TouchableOpacity>
+            <View style={[styles.subMenu, { borderLeftColor: theme.borderSubtle }]}> 
+              {settingsItems.map((item) => (
+                <TouchableOpacity
+                  key={item.screen}
+                  style={styles.subMenuItem}
+                  activeOpacity={0.7}
+                  onPress={() => handleMenuPress(item.screen)}
+                >
+                  <Ionicons name={item.icon} size={20} color={theme.textMuted} style={styles.menuIcon} />
+                  <Text style={[styles.subMenuTitle, { color: theme.textMuted }]}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           )}
         </View>
 
-        {isLoggedIn && (
-          <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.accent }]} onPress={() => props.navigation.navigate('Tabs' as never)}>
-            <Ionicons name="arrow-back-circle" size={24} color="#FFF" />
-            <Text style={styles.backButtonText}>Home</Text>
-          </TouchableOpacity>
-        )}
-
+        {/* Drawer Footer */}
         <View style={styles.drawerFooter}>
           {isLoggedIn ? (
-            <TouchableOpacity style={[styles.logoutButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.accent }]} onPress={() => handleMenuPress('Logout')}>
-              <Ionicons name="log-out-outline" size={22} color={theme.accent} />
-              <Text style={[styles.logoutButtonText, { color: theme.accent }]}>Logout</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity style={[styles.homeActionButton, { backgroundColor: theme.accent }]} onPress={() => props.navigation.navigate('Tabs' as never)}>
+                <Ionicons name="home-outline" size={20} color="#FFF" />
+                <Text style={styles.homeActionText}>Back to Home</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={[styles.logoutButton, { borderColor: theme.borderSubtle }]} onPress={() => handleMenuPress('Logout')}>
+                <Ionicons name="log-out-outline" size={20} color={palette.crimson} />
+                <Text style={[styles.logoutButtonText, { color: palette.crimson }]}>Logout</Text>
+              </TouchableOpacity>
+            </>
           ) : (
             <TouchableOpacity style={[styles.loginButtonBottom, { backgroundColor: theme.accent }]} onPress={() => props.navigation.navigate('Signup' as never)}>
               <Ionicons name="log-in-outline" size={22} color="#FFF" />
@@ -159,7 +226,6 @@ export default function MainDrawer() {
   const isDark = scheme === 'dark';
   const theme = getTheme(isDark);
 
-  // FIXED: Moved unreadPromoCount to the top level to avoid breaking React hook rules
   const {
     isLoggedIn,
     isAuthLoading,
@@ -209,7 +275,7 @@ export default function MainDrawer() {
           screenOptions={{
             headerShown: true,
             sceneStyle: { backgroundColor: isDark ? theme.background : 'transparent' },
-            drawerStyle: { backgroundColor: theme.surface, width: 280 },
+            drawerStyle: { backgroundColor: theme.surface, width: 300 }, // Slightly wider for a modern feel
             drawerType: 'slide',
             overlayColor: theme.modalOverlay,
           }}
@@ -227,7 +293,7 @@ export default function MainDrawer() {
             headerRight: () => {
               return isLoggedIn ? (
                 <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.notifButton}>
-                    <Ionicons name="notifications" size={22} color="#FFF" />
+                    <Ionicons name="notifications-outline" size={24} color="#FFF" />
                     {unreadPromoCount > 0 && (
                         <View style={styles.badge}>
                             <Text style={styles.badgeText}>{unreadPromoCount > 99 ? '99+' : unreadPromoCount}</Text>
@@ -236,7 +302,7 @@ export default function MainDrawer() {
                 </TouchableOpacity>
               ) : null;
             },
-            headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent },
+            headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent, elevation: 0, shadowOpacity: 0 },
             headerTintColor: '#FFF',
           })}
         />
@@ -249,11 +315,9 @@ export default function MainDrawer() {
         <Drawer.Screen name="Signup" component={Signup} options={{ headerTitle: 'Sign Up', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF', drawerItemStyle: { display: 'none' } }} />
         <Drawer.Screen name="ForgotPassword" component={ForgotPassword} options={{ headerTitle: 'Forgot Password', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF', drawerItemStyle: { display: 'none' } }} />
         <Drawer.Screen name="Profile" component={Profile} options={{ headerTitle: 'Profile', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF', drawerItemStyle: { display: 'none' } }} />
-        <Drawer.Screen name="FAQ" component={FAQScreen} options={{ headerTitle: 'FAQ', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF' }} />
+        <Drawer.Screen name="FAQ" component={FAQScreen} options={{ headerTitle: 'FAQ', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF', drawerItemStyle: { display: 'none' } }} />
         </Drawer.Navigator>
       </TabScreenBackground>
-
-      {/* FIXED: Removed dangling </View> and </Modal> tags that were here */}
 
       <FeedbackModal
         visible={feedbackModal.visible}
@@ -270,78 +334,140 @@ export default function MainDrawer() {
 export type { DrawerParamList };
 
 const styles = StyleSheet.create({
-  // ── Drawer ──────────────────────────────────────
-  drawerContent: { flex: 1 },
-  menuSection: { paddingHorizontal: spacing.lg, marginTop: spacing.md },
-  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.lg, borderBottomWidth: 1 },
-  menuItemText: { flex: 1, ...typography.labelLg, marginLeft: spacing.lg },
-  subMenu: { marginLeft: 50, marginTop: -spacing.xxs, marginBottom: spacing.md },
-  subMenuItem: { paddingVertical: spacing.md },
-  subMenuText: { ...typography.bodyMd },
-  backButton: {
-    marginTop: spacing.xl, marginHorizontal: spacing.lg,
-    paddingVertical: spacing.md, borderRadius: radii.lg,
-    flexDirection: 'row', justifyContent: 'center', gap: spacing.md, alignItems: 'center',
+  // ── Drawer Content ──────────────────────────────────────
+  drawerContent: { flexGrow: 1 },
+  
+  // Header
+  brandHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing['2xl'],
+    borderBottomWidth: 1,
+    marginBottom: spacing.md,
   },
-  backButtonText: { color: '#FFF', ...typography.labelLg },
+  brandLogo: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.full,
+    marginRight: spacing.md,
+  },
+  brandTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  brandTitle: { ...typography.headingMd, fontWeight: '700' as const },
+  brandSubtitle: { ...typography.bodySm, marginTop: 2 },
+  
+  // Menu Section
+  menuSection: { 
+    paddingHorizontal: spacing.xl, 
+    flex: 1,
+  },
+  sectionLabel: { 
+    ...typography.caption, 
+    fontSize: 11,
+    fontWeight: '700' as const,
+    letterSpacing: 1.2, 
+    marginBottom: spacing.md,
+    marginTop: spacing.md,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  menuIcon: {
+    marginRight: spacing.md,
+    width: 24,
+    textAlign: 'center',
+  },
+  menuTitle: { 
+    flex: 1, 
+    ...typography.labelLg,
+    fontWeight: '500' as const,
+  },
+
+  // Sub Menu
+  subMenu: {
+    marginLeft: 12, // Align with the center of parent icon
+    paddingLeft: spacing.xl,
+    borderLeftWidth: 1,
+    marginBottom: spacing.sm,
+  },
+  subMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  subMenuTitle: { 
+    ...typography.bodyMd,
+  },
+
+  // Footer Actions
+  drawerFooter: { 
+    paddingHorizontal: spacing.xl, 
+    paddingTop: spacing.xl,
+    paddingBottom: spacing['2xl'], 
+    gap: spacing.md,
+  },
+  homeActionButton: {
+    paddingVertical: spacing.md, 
+    borderRadius: radii.full,
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  homeActionText: { 
+    color: '#FFF', 
+    ...typography.labelLg,
+    fontWeight: '600' as const,
+  },
   logoutButton: {
-    paddingVertical: spacing.md, borderRadius: radii.lg,
-    flexDirection: 'row', justifyContent: 'center', gap: spacing.md, alignItems: 'center',
-    borderWidth: 1.5, width: '100%',
+    paddingVertical: spacing.md, 
+    borderRadius: radii.full,
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
   },
-  logoutButtonText: { ...typography.labelLg },
+  logoutButtonText: { 
+    ...typography.labelLg,
+    fontWeight: '600' as const,
+  },
   loginButtonBottom: {
-    paddingVertical: spacing.md, borderRadius: radii.lg,
-    flexDirection: 'row', justifyContent: 'center', gap: spacing.md, alignItems: 'center', width: '100%',
+    paddingVertical: spacing.md, 
+    borderRadius: radii.full,
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    gap: spacing.sm,
   },
-  loginButtonText: { color: '#FFF', ...typography.labelLg },
-  drawerFooter: { marginTop: 'auto', paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, paddingBottom: spacing.md },
+  loginButtonText: { 
+    color: '#FFF', 
+    ...typography.labelLg,
+    fontWeight: '600' as const, 
+  },
 
-  // ── Header bar buttons ─────────────────────────
-  menuButton: { marginLeft: spacing.lg, padding: spacing.xxs },
+  // Header navigation elements
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  notifButton: { marginRight: spacing.lg, padding: spacing.xxs, position: 'relative' },
+  menuButton: { marginLeft: spacing.md, padding: spacing.xs },
+  notifButton: { marginRight: spacing.md, padding: spacing.xs, position: 'relative' },
   badge: { 
-    position: 'absolute', top: -2, right: -2, 
-    backgroundColor: palette.warning, borderRadius: radii.full, 
-    width: 18, height: 18, justifyContent: 'center', alignItems: 'center',
+    position: 'absolute', 
+    top: 4, 
+    right: 4, 
+    backgroundColor: palette.warning, 
+    borderRadius: radii.full, 
+    width: 18, 
+    height: 18, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FFF',
   },
-  badgeText: { ...typography.caption, fontWeight: '800', color: '#000' },
-
-  // ── Coupon Wallet Modal ─────────────────────────
-  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalContainer: { height: '70%', borderTopLeftRadius: radii['2xl'], borderTopRightRadius: radii['2xl'] },
-  modalHeader: { 
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', 
-    padding: spacing.xl, borderBottomWidth: 1,
-  },
-  modalTitle: { ...typography.headingLg },
-  emptyWallet: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  couponItem: {
-    flexDirection: 'row', borderRadius: radii.xl, marginBottom: spacing.md,
-    padding: spacing.md, alignItems: 'center',
-  },
-  couponLeft: { flex: 1 },
-  couponProduct: { ...typography.labelLg, marginBottom: 2 },
-  couponName: { ...typography.bodyMd, marginBottom: spacing.xxs },
-  couponCode: { ...typography.caption },
-  couponRight: { alignItems: 'center', justifyContent: 'center', marginLeft: spacing.md },
-  useBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radii.md },
-  useBtnText: { color: '#FFF', ...typography.labelSm },
-  dismissBtn: { position: 'absolute' as const, top: spacing.sm, right: spacing.sm, zIndex: 10 },
-
-  // ── POS Modal ───────────────────────────────────
-  posModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' },
-  posModalBox: { width: '90%', padding: spacing['2xl'], borderRadius: radii['2xl'], alignItems: 'center' },
-  posModalTitle: { fontSize: 22, fontWeight: '900' as const, letterSpacing: 1 },
-  posCodeContainer: { 
-    width: '100%', padding: spacing.xl, 
-    borderRadius: radii.xl, borderWidth: 2, 
-    borderStyle: 'dashed', alignItems: 'center', marginBottom: spacing['2xl'],
-  },
-  posProductText: { ...typography.headingMd },
-  posDiscountText: { ...typography.headingSm, marginBottom: spacing.md },
-  dashedLine: { width: '100%', height: 1, marginVertical: spacing.lg },
-  posLabel: { ...typography.caption, letterSpacing: 2, marginBottom: spacing.xxs },
-  posCodeText: { fontSize: 36, fontWeight: '800' as const, letterSpacing: 4 },
+  badgeText: { fontSize: 10, fontWeight: '800' as const, color: '#000' },
 });

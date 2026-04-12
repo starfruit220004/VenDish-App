@@ -29,6 +29,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/firstapp/users/register/',
   '/firstapp/users/verify-email/',
   '/firstapp/users/resend-verification-email/',
+  '/firstapp/users/reactivate/',
   '/request-otp/',
   '/verify-otp/',
   '/change-password-token/',

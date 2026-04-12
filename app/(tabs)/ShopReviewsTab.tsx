@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, useColorScheme, Image, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, useColorScheme, Image, RefreshControl, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useReviews } from './ReviewsContext';
@@ -9,6 +9,8 @@ import WriteShopReview from './WriteShopReview';
 import { getTheme, spacing, typography, radii, layout, palette } from '../../constants/theme';
 
 const Stack = createNativeStackNavigator();
+const REVIEWS_PAGE_SIZE = 5;
+const REVIEWS_SCROLL_TOP_THRESHOLD = 550;
 
 function ShopReviewsHome({ navigation }: any) {
   const scheme = useColorScheme();
@@ -20,6 +22,10 @@ function ShopReviewsHome({ navigation }: any) {
   const [modalMessage, setModalMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showMyReviews, setShowMyReviews] = useState(false);
+  const [visibleReviewCount, setVisibleReviewCount] = useState(REVIEWS_PAGE_SIZE);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const reviewsListRef = useRef<FlatList<any> | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -29,6 +35,7 @@ function ShopReviewsHome({ navigation }: any) {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setShowScrollTop(false);
     await refreshReviews();
     if (isLoggedIn && refreshUserData) {
       await refreshUserData();
@@ -36,7 +43,6 @@ function ShopReviewsHome({ navigation }: any) {
     setRefreshing(false);
   }, [refreshReviews, isLoggedIn, refreshUserData]);
 
-  const [showAllReviews, setShowAllReviews] = useState(false);
   const averageRating = getAverageShopRating();
 
   type DisplayReview = {
@@ -82,7 +88,29 @@ function ShopReviewsHome({ navigation }: any) {
   );
 
   const activeReviews: DisplayReview[] = showMyReviews ? myCombinedReviews : customerShopReviews;
-  const displayedReviews = showAllReviews ? activeReviews : activeReviews.slice(0, 5);
+  const displayedReviews = activeReviews.slice(0, visibleReviewCount);
+  const hasMoreReviews = displayedReviews.length < activeReviews.length;
+
+  useEffect(() => {
+    setVisibleReviewCount(REVIEWS_PAGE_SIZE);
+    setShowScrollTop(false);
+  }, [showMyReviews, shopReviews.length, foodReviews.length]);
+
+  const loadMoreReviews = useCallback(() => {
+    if (!hasMoreReviews) return;
+    setVisibleReviewCount((prev) => Math.min(prev + REVIEWS_PAGE_SIZE, activeReviews.length));
+  }, [hasMoreReviews, activeReviews.length]);
+
+  const handleReviewsScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const shouldShow = offsetY > REVIEWS_SCROLL_TOP_THRESHOLD;
+    setShowScrollTop((prev) => (prev === shouldShow ? prev : shouldShow));
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    reviewsListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    setShowScrollTop(false);
+  }, []);
 
   const isOwnReview = (reviewUsername: string) => {
     if (!isLoggedIn || !userData?.username) return false;
@@ -97,7 +125,8 @@ function ShopReviewsHome({ navigation }: any) {
     }
 
     setShowMyReviews((prev) => !prev);
-    setShowAllReviews(false);
+    setVisibleReviewCount(REVIEWS_PAGE_SIZE);
+    setShowScrollTop(false);
   };
 
   const formatDate = (timestamp: number) => {
@@ -128,100 +157,226 @@ function ShopReviewsHome({ navigation }: any) {
     );
   };
 
-  return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: isDark ? theme.background : 'transparent' }]}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl 
-          refreshing={refreshing} 
-          onRefresh={onRefresh} 
-          colors={[theme.accent]} 
-          tintColor={theme.accent} 
-        />
-      }
+  const renderReviewItem = ({ item: review }: { item: DisplayReview }) => (
+    <View
+      style={[styles.reviewCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }, theme.cardShadow]}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={[styles.headerIconWrap, { backgroundColor: theme.accentSoft }]}>
-          <Ionicons name="restaurant" size={36} color={theme.accent} />
-        </View>
-        <Text style={[styles.title, { color: theme.accentText }]}>
-          Kuya Vince Carenderia
-        </Text>
-        <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-          Shop Reviews
-        </Text>
-      </View>
-
-      {/* Overall Rating Card */}
-      <View style={[styles.ratingCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
-        <View style={styles.ratingContent}>
-          <Text style={[styles.ratingNumber, { color: theme.accent }]}>
-            {averageRating > 0 ? averageRating.toFixed(1) : '0.0'}
-          </Text>
-          {renderStars(averageRating)}
-          <Text numberOfLines={1} style={[styles.ratingCount, { color: theme.textMuted }]}>
-            {shopReviews.length} {shopReviews.length === 1 ? 'review' : 'reviews'}
-          </Text>
-        </View>
-
-        {!isLoggedIn || userData?.has_completed_transaction ? (
-          <TouchableOpacity
-            style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
-            onPress={() => {
-              if (!isLoggedIn) {
-                setModalMessage('Please login first to write a review');
-                setShowModal(true);
-                return;
-              }
-              navigation.navigate('WriteShopReview');
-            }}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="create-outline" size={20} color="#FFF" />
-            <Text style={styles.writeReviewText}>Write a Review</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={{ padding: 12, backgroundColor: theme.surfaceElevated, borderRadius: radii.lg, alignItems: 'center', width: '100%' }}>
-            <Ionicons name="lock-closed-outline" size={28} color={theme.textMuted} style={{ marginBottom: 6 }} />
-            <Text style={{ textAlign: 'center', color: theme.textSecondary, ...typography.bodySm }}>
-              You need at least one completed transaction at our physical POS before you can write a review. Please provide your registered account details to the cashier on your next visit!
+      <View style={styles.reviewHeader}>
+        <View style={styles.reviewAuthor}>
+          {review.profilePic ? (
+            <Image source={{ uri: review.profilePic }} style={styles.reviewAvatar} />
+          ) : (
+            <View style={[styles.reviewAvatarFallback, { backgroundColor: theme.accentSoft }]}> 
+              <Text style={[styles.reviewAvatarText, { color: theme.accent }]}> 
+                {review.username.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+          <View>
+            <Text style={[styles.reviewUsername, { color: theme.textPrimary }]}>
+              {review.username}
+            </Text>
+            <Text style={[styles.reviewDate, { color: theme.textDisabled }]}> 
+              {formatDate(review.timestamp)}
             </Text>
           </View>
+        </View>
+        <View style={styles.reviewHeaderActions}>
+          <View style={styles.reviewRating}>
+            {[...Array(5)].map((_, i) => (
+              <Ionicons
+                key={i}
+                name={i < review.rating ? 'star' : 'star-outline'}
+                size={15}
+                color={palette.warning}
+              />
+            ))}
+          </View>
+          {isOwnReview(review.username) && (
+            <TouchableOpacity
+              style={[styles.editReviewButton, { backgroundColor: theme.accentSoft }]}
+              onPress={() => {
+                if (review.reviewType === 'food') {
+                  navigation.navigate('Feed', {
+                    screen: 'WriteReview',
+                    params: {
+                      food: {
+                        id: review.foodId || 0,
+                        name: review.foodName || 'Food Item',
+                        description: 'Food review',
+                        image: require('../../assets/images/Logo2.jpg'),
+                        category: 'Food',
+                      },
+                      editReview: {
+                        id: review.id,
+                        rating: review.rating,
+                        review: review.review,
+                        media: review.media || null,
+                      },
+                    },
+                  });
+                } else {
+                  navigation.navigate('WriteShopReview', {
+                    editReview: {
+                      id: review.id,
+                      rating: review.rating,
+                      review: review.review,
+                      media: review.media || null,
+                    },
+                  });
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="create-outline" size={14} color={theme.accent} />
+              <Text style={[styles.editReviewButtonText, { color: theme.accent }]}>Edit</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.reviewMetaRow}>
+        <View style={[styles.reviewTypePill, { backgroundColor: theme.accentSoft }]}> 
+          <Text style={[styles.reviewTypeText, { color: theme.accent }]}> 
+            {review.reviewType === 'food' ? 'Food Review' : 'Shop Review'}
+          </Text>
+        </View>
+        {review.reviewType === 'food' && (
+          <Text numberOfLines={1} style={[styles.foodReviewLabel, { color: theme.textMuted }]}> 
+            {review.foodName || `Food #${review.foodId}`}
+          </Text>
         )}
       </View>
 
-      {/* Reviews Section */}
-      <View style={styles.reviewsSection}>
-        <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary, marginBottom: 0 }]}> 
-            {showMyReviews ? 'My Reviews' : 'Customer Reviews'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.myReviewsButton, { backgroundColor: theme.accentSoft }]}
-            onPress={toggleMyReviews}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name={showMyReviews ? 'people-outline' : 'person-outline'}
-              size={14}
-              color={theme.accent}
-            />
-            <Text style={[styles.myReviewsButtonText, { color: theme.accent }]}> 
-              {showMyReviews ? 'All Reviews' : 'My Reviews'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+      <Text style={[styles.reviewText, { color: theme.textSecondary }]}>
+        {review.review}
+      </Text>
 
-        {activeReviews.length === 0 ? (
+      {review.media && (
+        <Image source={{ uri: review.media }} style={styles.reviewImage} />
+      )}
+
+      {review.adminReply ? (
+        <View
+          style={[
+            styles.adminReplyContainer,
+            { backgroundColor: theme.accentSoft, borderColor: theme.accent },
+          ]}
+        >
+          <Text style={[styles.adminReplyLabel, { color: theme.accent }]}> 
+            Admin Reply{review.adminReplyUpdatedAt ? ` • ${formatDateTime(review.adminReplyUpdatedAt)}` : ''}
+          </Text>
+          <Text style={[styles.adminReplyText, { color: theme.accentText }]}> 
+            {review.adminReply}
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+
+  return (
+    <>
+      <FlatList
+        ref={reviewsListRef}
+        style={[styles.container, { backgroundColor: isDark ? theme.background : 'transparent' }]}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        data={displayedReviews}
+        keyExtractor={(item) => item.id}
+        renderItem={renderReviewItem}
+        onEndReached={loadMoreReviews}
+        onEndReachedThreshold={0.35}
+        onScroll={handleReviewsScroll}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.accent]}
+            tintColor={theme.accent}
+          />
+        }
+        ListHeaderComponent={
+          <>
+            <View style={styles.header}>
+              <View style={[styles.headerIconWrap, { backgroundColor: theme.accentSoft }]}> 
+                <Ionicons name="restaurant" size={36} color={theme.accent} />
+              </View>
+              <Text style={[styles.title, { color: theme.accentText }]}> 
+                Kuya Vince Carenderia
+              </Text>
+              <Text style={[styles.subtitle, { color: theme.textMuted }]}> 
+                Shop Reviews
+              </Text>
+            </View>
+
+            <View style={[styles.ratingCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+              <View style={styles.ratingContent}>
+                <Text style={[styles.ratingNumber, { color: theme.accent }]}> 
+                  {averageRating > 0 ? averageRating.toFixed(1) : '0.0'}
+                </Text>
+                {renderStars(averageRating)}
+                <Text numberOfLines={1} style={[styles.ratingCount, { color: theme.textMuted }]}> 
+                  {shopReviews.length} {shopReviews.length === 1 ? 'review' : 'reviews'}
+                </Text>
+              </View>
+
+              {!isLoggedIn || userData?.has_completed_transaction ? (
+                <TouchableOpacity
+                  style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
+                  onPress={() => {
+                    if (!isLoggedIn) {
+                      setModalMessage('Please login first to write a review');
+                      setShowModal(true);
+                      return;
+                    }
+                    navigation.navigate('WriteShopReview');
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="create-outline" size={20} color="#FFF" />
+                  <Text style={styles.writeReviewText}>Write a Review</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={{ padding: 12, backgroundColor: theme.surfaceElevated, borderRadius: radii.lg, alignItems: 'center', width: '100%' }}>
+                  <Ionicons name="lock-closed-outline" size={28} color={theme.textMuted} style={{ marginBottom: 6 }} />
+                  <Text style={{ textAlign: 'center', color: theme.textSecondary, ...typography.bodySm }}>
+                    You need at least one completed transaction at our physical POS before you can write a review. Please provide your registered account details to the cashier on your next visit!
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.reviewsSection}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={[styles.sectionTitle, { color: theme.textPrimary, marginBottom: 0 }]}> 
+                  {showMyReviews ? 'My Reviews' : 'Customer Reviews'}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.myReviewsButton, { backgroundColor: theme.accentSoft }]}
+                  onPress={toggleMyReviews}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={showMyReviews ? 'people-outline' : 'person-outline'}
+                    size={14}
+                    color={theme.accent}
+                  />
+                  <Text style={[styles.myReviewsButtonText, { color: theme.accent }]}> 
+                    {showMyReviews ? 'All Reviews' : 'My Reviews'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </>
+        }
+        ListEmptyComponent={
           <View style={[styles.noReviewsContainer, { backgroundColor: theme.surface }, theme.cardShadow]}>
             <Ionicons name="chatbox-outline" size={48} color={theme.textDisabled} />
-            <Text style={[styles.noReviewsTitle, { color: theme.textPrimary }]}>
+            <Text style={[styles.noReviewsTitle, { color: theme.textPrimary }]}> 
               {showMyReviews ? 'No reviews from your account yet' : 'No reviews yet'}
             </Text>
-            <Text style={[styles.noReviewsText, { color: theme.textMuted }]}>
+            <Text style={[styles.noReviewsText, { color: theme.textMuted }]}> 
               {showMyReviews ? 'Post food or shop reviews to see them here.' : 'Be the first to review our shop!'}
             </Text>
             {!isLoggedIn || userData?.has_completed_transaction ? (
@@ -240,165 +395,34 @@ function ShopReviewsHome({ navigation }: any) {
                 <Text style={styles.firstReviewButtonText}>Write First Review</Text>
               </TouchableOpacity>
             ) : (
-               <View style={{ marginTop: 12, padding: 12, backgroundColor: theme.surfaceElevated, borderRadius: radii.lg, alignItems: 'center' }}>
-                 <Ionicons name="lock-closed-outline" size={24} color={theme.textMuted} style={{ marginBottom: 4 }} />
-                 <Text style={{ textAlign: 'center', color: theme.textSecondary, ...typography.bodySm }}>
-                    You need a completed POS transaction to review.
-                 </Text>
-               </View>
+              <View style={{ marginTop: 12, padding: 12, backgroundColor: theme.surfaceElevated, borderRadius: radii.lg, alignItems: 'center' }}>
+                <Ionicons name="lock-closed-outline" size={24} color={theme.textMuted} style={{ marginBottom: 4 }} />
+                <Text style={{ textAlign: 'center', color: theme.textSecondary, ...typography.bodySm }}>
+                  You need a completed POS transaction to review.
+                </Text>
+              </View>
             )}
           </View>
-        ) : (
-          <>
-            {displayedReviews.map(review => (
-              <View
-                key={review.id}
-                style={[styles.reviewCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }, theme.cardShadow]}
-              >
-                <View style={styles.reviewHeader}>
-                  <View style={styles.reviewAuthor}>
-                    {review.profilePic ? (
-                      <Image source={{ uri: review.profilePic }} style={styles.reviewAvatar} />
-                    ) : (
-                      <View style={[styles.reviewAvatarFallback, { backgroundColor: theme.accentSoft }]}>
-                        <Text style={[styles.reviewAvatarText, { color: theme.accent }]}>
-                          {review.username.charAt(0).toUpperCase()}
-                        </Text>
-                      </View>
-                    )}
-                    <View>
-                      <Text style={[styles.reviewUsername, { color: theme.textPrimary }]}>
-                        {review.username}
-                      </Text>
-                      <Text style={[styles.reviewDate, { color: theme.textDisabled }]}>
-                        {formatDate(review.timestamp)}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.reviewHeaderActions}>
-                    <View style={styles.reviewRating}>
-                      {[...Array(5)].map((_, i) => (
-                        <Ionicons
-                          key={i}
-                          name={i < review.rating ? 'star' : 'star-outline'}
-                          size={15}
-                          color={palette.warning}
-                        />
-                      ))}
-                    </View>
-                    {isOwnReview(review.username) && (
-                      <TouchableOpacity
-                        style={[styles.editReviewButton, { backgroundColor: theme.accentSoft }]}
-                        onPress={() => {
-                          if (review.reviewType === 'food') {
-                            navigation.navigate('Feed', {
-                              screen: 'WriteReview',
-                              params: {
-                                food: {
-                                  id: review.foodId || 0,
-                                  name: review.foodName || 'Food Item',
-                                  description: 'Food review',
-                                  image: require('../../assets/images/Logo2.jpg'),
-                                  category: 'Food',
-                                },
-                                editReview: {
-                                  id: review.id,
-                                  rating: review.rating,
-                                  review: review.review,
-                                  media: review.media || null,
-                                },
-                              },
-                            });
-                          } else {
-                            navigation.navigate('WriteShopReview', {
-                              editReview: {
-                                id: review.id,
-                                rating: review.rating,
-                                review: review.review,
-                                media: review.media || null,
-                              },
-                            });
-                          }
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="create-outline" size={14} color={theme.accent} />
-                        <Text style={[styles.editReviewButtonText, { color: theme.accent }]}>Edit</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
+        }
+        ListFooterComponent={
+          hasMoreReviews ? (
+            <View style={styles.paginationHint}>
+              <Text style={[styles.paginationHintText, { color: theme.textMuted }]}>Loading more reviews as you scroll...</Text>
+            </View>
+          ) : null
+        }
+      />
 
-                <View style={styles.reviewMetaRow}>
-                  <View style={[styles.reviewTypePill, { backgroundColor: theme.accentSoft }]}> 
-                    <Text style={[styles.reviewTypeText, { color: theme.accent }]}> 
-                      {review.reviewType === 'food' ? 'Food Review' : 'Shop Review'}
-                    </Text>
-                  </View>
-                  {review.reviewType === 'food' && (
-                    <Text numberOfLines={1} style={[styles.foodReviewLabel, { color: theme.textMuted }]}> 
-                      {review.foodName || `Food #${review.foodId}`}
-                    </Text>
-                  )}
-                </View>
+      {showScrollTop && (
+        <TouchableOpacity
+          style={[styles.scrollTopButton, { backgroundColor: theme.accent }, theme.cardShadowHeavy]}
+          onPress={scrollToTop}
+          activeOpacity={0.9}
+        >
+          <Ionicons name="arrow-up" size={20} color="#FFF" />
+        </TouchableOpacity>
+      )}
 
-                <Text style={[styles.reviewText, { color: theme.textSecondary }]}>
-                  {review.review}
-                </Text>
-
-                {/* Move image rendering ABOVE the admin reply */}
-                {review.media && (
-                  <Image source={{ uri: review.media }} style={styles.reviewImage} />
-                )}
-
-                {review.adminReply ? (
-                  <View
-                    style={[
-                      styles.adminReplyContainer,
-                      { backgroundColor: theme.accentSoft, borderColor: theme.accent },
-                    ]}
-                  >
-                    <Text style={[styles.adminReplyLabel, { color: theme.accent }]}> 
-                      Admin Reply{review.adminReplyUpdatedAt ? ` • ${formatDateTime(review.adminReplyUpdatedAt)}` : ''}
-                    </Text>
-                    <Text style={[styles.adminReplyText, { color: theme.accentText }]}> 
-                      {review.adminReply}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            ))}
-
-            {activeReviews.length > 5 && !showAllReviews && (
-              <TouchableOpacity
-                style={styles.showMoreButton}
-                onPress={() => setShowAllReviews(true)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.showMoreText, { color: theme.accent }]}>
-                  Show all {activeReviews.length} reviews
-                </Text>
-                <Ionicons name="chevron-down" size={20} color={theme.accent} />
-              </TouchableOpacity>
-            )}
-
-            {showAllReviews && activeReviews.length > 5 && (
-              <TouchableOpacity
-                style={styles.showMoreButton}
-                onPress={() => setShowAllReviews(false)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.showMoreText, { color: theme.accent }]}>
-                  Show less
-                </Text>
-                <Ionicons name="chevron-up" size={20} color={theme.accent} />
-              </TouchableOpacity>
-            )}
-          </>
-        )}
-      </View>
-
-      {/* ── Favorite Toggle Modal ────────────────────────────── */}
       {showModal && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={{ backgroundColor: theme.surface, padding: 20, borderRadius: radii.lg, width: '80%', alignItems: 'center' }}>
@@ -415,7 +439,7 @@ function ShopReviewsHome({ navigation }: any) {
           </View>
         </View>
       )}
-    </ScrollView>
+    </>
   );
 }
 
@@ -591,4 +615,21 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   showMoreText: { ...typography.labelMd },
+  paginationHint: {
+    alignItems: 'center',
+    paddingBottom: spacing.md,
+  },
+  paginationHintText: {
+    ...typography.bodySm,
+  },
+  scrollTopButton: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing['5xl'],
+    width: 46,
+    height: 46,
+    borderRadius: radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

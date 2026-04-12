@@ -12,3 +12,7 @@ export const deactivateAccount = async (password: string) => {
   // Token is auto-attached by the API interceptor — no manual header needed
   return api.post('/firstapp/users/deactivate/', { password });
 };
+
+export const reactivateAccount = async (username: string, password: string) => {
+  return api.post('/firstapp/users/reactivate/', { username, password });
+};

@@ -50,6 +50,7 @@ export default function Profile() {
   // Modal State
   const [isDeactivateModalVisible, setDeactivateModalVisible] = useState(false);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // NEW STATE FOR PASSWORD VISIBILITY
   const [isLoading, setIsLoading] = useState(false);
   const [feedbackModal, setFeedbackModal] = useState<{
     visible: boolean;
@@ -96,13 +97,11 @@ export default function Profile() {
 
   // ── Edit Profile helpers ───────────────────────────────────────────────────
   const startEditing = () => {
-    // Robust parser to handle legacy monolithic address strings
     const addr = userData?.address || '';
     const parts = addr.split(',').map(s => s.trim()).filter(Boolean);
     
     if (parts.length >= 3) {
       const lastPart = parts[parts.length - 1];
-      // Check if the last part looks like a zip code
       if (/\d/.test(lastPart) && lastPart.length <= 6) {
          setEditZip(lastPart);
          setEditCity(parts[parts.length - 2] || '');
@@ -160,7 +159,6 @@ export default function Profile() {
     try {
       let response;
 
-      // Compile chunked address elements into standard format
       const combinedAddress = [editStreet, editBarangay, editCity, editZip]
         .map(part => part.trim())
         .filter(Boolean)
@@ -177,13 +175,12 @@ export default function Profile() {
       };
 
       if (editProfilePic) {
-        // Image upload → must use FormData + multipart
         const formData = new FormData();
         Object.entries(payload).forEach(([key, value]) => {
             formData.append(key, value);
         });
         
-        // @ts-ignore – React Native FormData accepts this shape
+        // @ts-ignore
         formData.append('profile_pic', {
           uri: editProfilePic,
           name: 'profile_pic.jpg',
@@ -195,7 +192,6 @@ export default function Profile() {
           transformRequest: (data: any) => data,
         });
       } else {
-        // Text-only update → plain JSON
         response = await api.patch('/firstapp/users/me/', payload);
       }
 
@@ -204,7 +200,6 @@ export default function Profile() {
       const middleName = backendUser.middle_name || backendUser.middlename || '';
       const lastName = backendUser.last_name || backendUser.lastname || '';
 
-      // Sync context + AsyncStorage with the server response
       await updateUserData({
         ...userData!,
         phone: backendUser.phone || '',
@@ -275,6 +270,7 @@ export default function Profile() {
   const handleDeactivate = () => {
     setDeactivateModalVisible(true);
     setPassword('');
+    setShowPassword(false); // Reset visibility when opening
   };
 
   const confirmDeactivation = async () => {
@@ -604,22 +600,37 @@ export default function Profile() {
                 Confirm Password
             </Text>
             
-            <TextInput
-              style={[
-                  styles.input, 
-                  { 
-                      color: theme.textPrimary,
-                      borderColor: theme.border,
-                      backgroundColor: theme.surfaceElevated
-                  }
-              ]}
-              placeholder="Enter your password"
-              placeholderTextColor={theme.textDisabled}
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              autoCapitalize="none"
-            />
+            {/* UPDATED PASSWORD INPUT CONTAINER */}
+            <View style={[
+                styles.inputContainer, 
+                { 
+                    borderColor: theme.border,
+                    backgroundColor: theme.surfaceElevated
+                }
+            ]}>
+              <TextInput
+                style={[
+                    styles.passwordInput, 
+                    { color: theme.textPrimary }
+                ]}
+                placeholder="Enter your password"
+                placeholderTextColor={theme.textDisabled}
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity 
+                  onPress={() => setShowPassword(!showPassword)} 
+                  style={{ padding: spacing.xs }}
+              >
+                  <Ionicons 
+                      name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                      size={20} 
+                      color={theme.textMuted} 
+                  />
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -764,12 +775,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     alignSelf: 'flex-start',
   },
-  input: {
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     width: '100%',
-    padding: spacing.md,
     borderWidth: 1,
     borderRadius: radii.lg,
     marginBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+    height: 52,
+  },
+  passwordInput: {
+    flex: 1,
+    height: '100%',
     ...typography.bodyMd,
   },
   modalButtons: {
