@@ -66,6 +66,15 @@ export default function Login() {
     setReactivationUsername('');
   };
 
+  const handleBackPress = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.navigate('Tabs');
+  };
+
   const performLogin = async (normalizedUsername: string, rawPassword: string) => {
     const response = await api.post('/firstapp/token/', {
       username: normalizedUsername,
@@ -206,6 +215,15 @@ export default function Login() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={[styles.container, { backgroundColor: theme.background }]}>
+          <TouchableOpacity
+            style={[styles.backButton, { backgroundColor: theme.surface }, theme.cardShadow]}
+            onPress={handleBackPress}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Ionicons name="arrow-back" size={20} color={theme.textPrimary} />
+          </TouchableOpacity>
           
           <View style={styles.logoContainer}>
             <Image source={require('../../../assets/images/Logo2.jpg')} style={styles.logoImage} resizeMode="contain" />
@@ -343,7 +361,18 @@ export default function Login() {
 
 const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1 },
-  container: { flex: 1, padding: layout.screenPadding, justifyContent: 'center', minHeight: '100%' },
+  container: { flex: 1, padding: layout.screenPadding, justifyContent: 'center', minHeight: '100%', position: 'relative' },
+  backButton: {
+    position: 'absolute',
+    top: spacing.xl,
+    left: layout.screenPadding,
+    width: 40,
+    height: 40,
+    borderRadius: radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
   logoContainer: { alignItems: 'center', marginBottom: spacing['4xl'] },
   logoImage: { width: 120, height: 120, marginBottom: spacing.xl, borderRadius: radii.full },
   title: { ...typography.displaySm, marginBottom: spacing.xs },

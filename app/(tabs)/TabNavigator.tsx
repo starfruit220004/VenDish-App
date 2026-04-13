@@ -6,18 +6,18 @@ import Promos from './Promos';
 import FeedTab from './FeedTab';
 import WalletTab from './WalletTab';
 import FavoritesTab from './FavoritesTab';
-import LocationTab from './LocationTab';
 import ShopReviewsTab from './ShopReviewsTab';
+import HomeTab from './HomeTab';
 import TabScreenBackground from './TabScreenBackground';
 import { getTheme, layout, spacing, typography } from '../../constants/theme';
 import { useAuth } from '../context/AuthContext'; // <-- Added useAuth import
 
 type TabParamList = {
+  Home: undefined;
   Wallet: undefined;
   Promos: undefined;
   Feed: undefined;
   Favorites: undefined;
-  Location: undefined;
   ShopReviews: undefined;
 };
 
@@ -94,7 +94,7 @@ export default function TabNavigator() {
   return (
     <TabScreenBackground>
       <Tab.Navigator
-        initialRouteName="Promos"
+        initialRouteName="Home"
         screenOptions={{
           tabBarActiveTintColor: theme.tabBarActive,
           tabBarInactiveTintColor: theme.tabBarInactive,
@@ -118,6 +118,15 @@ export default function TabNavigator() {
           headerShown: false,
         }}
       >
+      <Tab.Screen
+        name="Home"
+        component={HomeTab}
+        options={{
+          tabBarIcon: ({ color, focused }) => <TabIcon name="home" color={color} focused={focused} />,
+          tabBarLabel: 'Home',
+        }}
+      />
+
       {isLoggedIn && (
         <Tab.Screen
           name="Wallet"
@@ -160,15 +169,6 @@ export default function TabNavigator() {
         options={{
           tabBarIcon: ({ color, focused }) => <TabIcon name="heart" color={color} focused={focused} />,
           tabBarLabel: 'Favorites',
-        }}
-      />
-
-      <Tab.Screen
-        name="Location"
-        component={LocationTab}
-        options={{
-          tabBarIcon: ({ color, focused }) => <TabIcon name="location" color={color} focused={focused} />,
-          tabBarLabel: 'Location',
         }}
       />
 

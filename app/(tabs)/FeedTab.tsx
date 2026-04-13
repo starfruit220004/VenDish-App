@@ -70,6 +70,7 @@ function FeedHome({ navigation }: any) {
         image: item.image ? { uri: item.image } : require('../../assets/images/Logo2.jpg'),
         category: item.category,
         price: Number(item.price),
+        servings: Number(item.stock_quantity ?? 0), 
         isAvailable: item.is_available, 
       }));
       setFoods(mappedFoods);
@@ -186,6 +187,9 @@ function FeedHome({ navigation }: any) {
               >
                 {food.name}
               </Text>
+              <Text style={[styles.servingsValue, { color: theme.textMuted }]}>
+                {food.servings} {food.servings === 1 ? 'serving' : 'servings'} left
+              </Text> 
             </View>
             <Text style={[styles.priceValue, { color: theme.accent }]}> 
               ₱{food.price.toFixed(0)}
@@ -551,6 +555,10 @@ const styles = StyleSheet.create({
   priceValue: {
     ...typography.headingMd,
     textAlign: 'right',
+  },
+  servingsValue: {
+    ...typography.bodySm,
+    marginTop: spacing.xxs,
   },
 
   // ── Empty State ─────────────────────────────────────────────

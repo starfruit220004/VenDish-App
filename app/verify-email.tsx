@@ -82,7 +82,7 @@ export default function VerifyEmailScreen() {
   }, [token, presetStatus, presetMessage]);
 
   const goToApp = () => {
-    router.replace('/(tabs)/App');
+    router.replace('/(tabs)/Auth/Login');
   };
 
   const iconName = status === 'success' ? 'checkmark-circle' : status === 'error' ? 'alert-circle' : 'mail-open-outline';

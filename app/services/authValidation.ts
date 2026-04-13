@@ -16,7 +16,7 @@ type LoginValidationInput = {
 };
 
 const NAME_REGEX = /^[A-Za-z][A-Za-z .'-]*$/;
-const USERNAME_REGEX = /^(?=.{3,30}$)[A-Za-z0-9._@+-]+$/;
+const USERNAME_REGEX = /^(?=.{3,}$)[A-Za-z0-9._@+-]+$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PASSWORD_SPECIAL_REGEX = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/;
 
@@ -163,7 +163,7 @@ export const validateSignupInput = (input: SignupValidationInput): string | null
   }
 
   if (!USERNAME_REGEX.test(username)) {
-    return 'Username must be 3 to 30 characters and can only include letters, numbers, and . _ @ + - symbols.';
+    return 'Username must be at least 3 characters and can only include letters, numbers, and . _ @ + - symbols.';
   }
 
   if (email.length > 254 || !EMAIL_REGEX.test(email)) {
@@ -214,7 +214,7 @@ export const validateLoginInput = (input: LoginValidationInput): string | null =
   }
 
   if (!USERNAME_REGEX.test(username)) {
-    return 'Enter a valid username (3 to 30 characters, letters, numbers, and . _ @ + - only).';
+    return 'Enter a valid username (at least 3 characters, letters, numbers, and . _ @ + - only).';
   }
 
   if (password.length < 8 || password.length > 64) {

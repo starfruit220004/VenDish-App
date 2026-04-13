@@ -208,7 +208,7 @@ function CustomDrawerContent(props: CustomDrawerContentProps) {
               </TouchableOpacity>
             </>
           ) : (
-            <TouchableOpacity style={[styles.loginButtonBottom, { backgroundColor: theme.accent }]} onPress={() => props.navigation.navigate('Signup' as never)}>
+            <TouchableOpacity style={[styles.loginButtonBottom, { backgroundColor: theme.accent }]} onPress={() => props.navigation.navigate('Login' as never)}>
               <Ionicons name="log-in-outline" size={22} color="#FFF" />
               <Text style={styles.loginButtonText}>Login / Signup</Text>
             </TouchableOpacity>

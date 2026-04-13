@@ -1,10 +1,10 @@
 // Navigation Types
 export type TabParamList = {
+  Home: undefined;
   Promos: undefined;
   Feed: undefined;
   Favorites: undefined;
   About: undefined;
-  Location: undefined;  
 };
 
 export type RootStackParamList = {
