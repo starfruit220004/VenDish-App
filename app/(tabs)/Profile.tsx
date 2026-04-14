@@ -22,6 +22,46 @@ import api from '../../api/api';
 import FeedbackModal, { FeedbackAction, FeedbackVariant } from './FeedbackModal';
 import { getTheme, spacing, typography, radii, palette } from '../../constants/theme';
 
+const PH_MOBILE_DIGITS = 11;
+const PH_MOBILE_REGEX = /^09\d{9}$/;
+
+const normalizePhilippinePhoneDigits = (value: unknown): string => {
+  const digitsOnly = String(value || '').replace(/\D/g, '');
+  if (!digitsOnly) {
+    return '';
+  }
+
+  let normalized = digitsOnly;
+  if (normalized.startsWith('63')) {
+    normalized = `0${normalized.slice(2)}`;
+  } else if (normalized.startsWith('9')) {
+    normalized = `0${normalized}`;
+  }
+
+  if (normalized.length > PH_MOBILE_DIGITS) {
+    normalized = normalized.slice(0, PH_MOBILE_DIGITS);
+  }
+
+  return normalized;
+};
+
+const formatPhilippinePhoneNumber = (value: unknown): string => {
+  const normalized = normalizePhilippinePhoneDigits(value);
+  if (!normalized) {
+    return '';
+  }
+
+  if (normalized.length <= 4) {
+    return normalized;
+  }
+
+  if (normalized.length <= 7) {
+    return `${normalized.slice(0, 4)}-${normalized.slice(4)}`;
+  }
+
+  return `${normalized.slice(0, 4)}-${normalized.slice(4, 7)}-${normalized.slice(7)}`;
+};
+
 export default function Profile() {
   const { userData, logout, updateUserData } = useAuth();
   const navigation = useNavigation();
@@ -31,7 +71,7 @@ export default function Profile() {
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
-  const [editPhone, setEditPhone] = useState(userData?.phone || '');
+  const [editPhone, setEditPhone] = useState(formatPhilippinePhoneNumber(userData?.phone || ''));
   const [editEmail, setEditEmail] = useState(userData?.email || '');
   const [editUsername, setEditUsername] = useState(userData?.username || '');
   const [editFirstname, setEditFirstname] = useState(userData?.firstname || '');
@@ -120,7 +160,7 @@ export default function Profile() {
       setEditZip('');
     }
 
-    setEditPhone(userData?.phone || '');
+    setEditPhone(formatPhilippinePhoneNumber(userData?.phone || ''));
     setEditEmail(userData?.email || '');
     setEditUsername(userData?.username || '');
     setEditFirstname(userData?.firstname || '');
@@ -158,6 +198,12 @@ export default function Profile() {
     setIsSaving(true);
     try {
       let response;
+      const normalizedPhone = normalizePhilippinePhoneDigits(editPhone);
+
+      if (normalizedPhone && !PH_MOBILE_REGEX.test(normalizedPhone)) {
+        showFeedback('Invalid Phone Number', 'Use Philippine mobile format: 09XX-XXX-XXXX.', 'error');
+        return;
+      }
 
       const combinedAddress = [editStreet, editBarangay, editCity, editZip]
         .map(part => part.trim())
@@ -165,7 +211,7 @@ export default function Profile() {
         .join(', ');
 
       const payload = {
-        phone: editPhone.trim(),
+        phone: normalizedPhone,
         address: combinedAddress,
         email: editEmail.trim(),
         username: editUsername.trim(),
@@ -313,6 +359,10 @@ export default function Profile() {
         return `${userData.firstname[0]}${userData.lastname[0]}`.toUpperCase();
     }
     return userData?.username?.slice(0, 2).toUpperCase() || 'KV';
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setEditPhone(formatPhilippinePhoneNumber(value));
   };
 
   return (
@@ -477,14 +527,15 @@ export default function Profile() {
                     <TextInput
                       style={[styles.editInput, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}
                       value={editPhone}
-                      onChangeText={setEditPhone}
-                      placeholder="Enter phone number"
+                      onChangeText={handlePhoneChange}
+                      placeholder="09XX-XXX-XXXX"
                       placeholderTextColor={theme.textDisabled}
                       keyboardType="phone-pad"
+                      maxLength={13}
                     />
                   ) : (
                     <Text style={[styles.infoValue, { color: userData?.phone ? theme.textPrimary : theme.textDisabled }]}>
-                      {userData?.phone || 'Not set'}
+                      {userData?.phone ? formatPhilippinePhoneNumber(userData.phone) : 'Not set'}
                     </Text>
                   )}
               </View>

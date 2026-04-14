@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   Modal,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Swipeable } from 'react-native-gesture-handler';
 import { getTheme, spacing, typography, radii, palette } from '../../constants/theme';
 import { useAuth, Coupon } from '../context/AuthContext';
 import FeedbackModal from './FeedbackModal';
@@ -50,6 +52,7 @@ export default function WalletTab() {
 
   const [posModalVisible, setPosModalVisible] = useState(false);
   const [selectedPosCoupon, setSelectedPosCoupon] = useState<Coupon | null>(null);
+  const swipeableRefs = useRef<Record<number, Swipeable | null>>({});
   const [feedbackModal, setFeedbackModal] = useState({
     visible: false,
     title: '',
@@ -62,8 +65,17 @@ export default function WalletTab() {
     setFeedbackModal({ visible: true, title, message, variant, actions });
   };
 
+  const closeSwipeRow = (couponId: number) => {
+    swipeableRefs.current[couponId]?.close();
+  };
+
+  const closeAllSwipeRows = () => {
+    Object.values(swipeableRefs.current).forEach((ref) => ref?.close());
+  };
+
   const closeFeedback = () => {
     setFeedbackModal(prev => ({ ...prev, visible: false }));
+    closeAllSwipeRows();
   };
 
   useEffect(() => {
@@ -84,8 +96,15 @@ export default function WalletTab() {
       'Are you sure you want to remove this coupon from your wallet?',
       'warning',
       [
-        { label: 'Cancel', style: 'secondary' },
-        { label: 'Remove', style: 'danger', onPress: async () => { await removeFromWallet(couponId); } },
+        { label: 'Cancel', style: 'secondary', onPress: () => closeSwipeRow(couponId) },
+        {
+          label: 'Remove',
+          style: 'danger',
+          onPress: async () => {
+            await removeFromWallet(couponId);
+            closeSwipeRow(couponId);
+          },
+        },
       ]
     );
   };
@@ -106,51 +125,78 @@ export default function WalletTab() {
     // Determine countdown string
     const daysRemainingText = !isDisabled ? getDaysRemainingText(item.expiration) : null;
 
-    return (
-      <View style={[styles.couponItem, { backgroundColor: theme.surfaceElevated, opacity: isDisabled ? 0.65 : 1 }, theme.cardShadow]}>
-        {isDisabled && (
+    // Animated right swipe action
+    const renderRightSwipeAction = (progress: any, dragX: any) => {
+      const scale = dragX.interpolate({
+        inputRange: [-80, -40, 0],
+        outputRange: [1, 0.6, 0.2],
+        extrapolate: 'clamp',
+      });
+
+      const translateX = progress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [60, 0],
+      });
+
+      return (
+        <Animated.View style={{ transform: [{ translateX }] }}>
           <TouchableOpacity
-            style={styles.dismissBtn}
+            style={styles.swipeRemoveAction}
+            activeOpacity={0.8}
             onPress={() => handleRemoveCoupon(item.id)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="close-circle" size={24} color={theme.textMuted} />
+            <Animated.View style={{ transform: [{ scale }] }}>
+              <Ionicons name="trash-outline" size={24} color="#FFF" />
+            </Animated.View>
+            <Text style={styles.swipeRemoveText}>Remove</Text>
           </TouchableOpacity>
-        )}
+        </Animated.View>
+      );
+    };
 
-        <View style={styles.couponLeft}>
-          <Text style={[styles.couponProduct, { color: theme.accentText }]}>{item.product_name}</Text>
-          <Text style={[styles.couponName, { color: theme.textSecondary }]}>{item.name}</Text>
-          <Text style={[styles.couponCode, { color: theme.textMuted }]}>Discount: <Text style={{ fontWeight: '700' }}>{item.rate === 'FREE' ? 'FREE ITEM' : `${item.rate} OFF`}</Text></Text>
-          
-          {item.expiration && (
-             <View style={{ marginTop: spacing.xxs }}>
-               <Text style={[typography.caption, { color: theme.textDisabled }]}>
-                  Expires: {formatDate(item.expiration)}
-               </Text>
-               {/* ⏳ Days Remaining Counter */}
-               {daysRemainingText && (
-                 <Text style={[typography.caption, { color: palette?.warning || theme.accentText, fontWeight: '700', marginTop: 2 }]}>
-                    ⏳ {daysRemainingText}
+    return (
+      <Swipeable
+        ref={(ref) => {
+          swipeableRefs.current[item.id] = ref;
+        }}
+        renderRightActions={renderRightSwipeAction}
+        overshootRight={false}
+        rightThreshold={40}
+      >
+        <View style={[styles.couponItem, { backgroundColor: theme.surfaceElevated, opacity: isDisabled ? 0.65 : 1 }, theme.cardShadow]}>
+          <View style={styles.couponLeft}>
+            <Text style={[styles.couponProduct, { color: theme.accentText }]}>{item.product_name}</Text>
+            <Text style={[styles.couponName, { color: theme.textSecondary }]}>{item.name}</Text>
+            <Text style={[styles.couponCode, { color: theme.textMuted }]}>Discount: <Text style={{ fontWeight: '700' }}>{item.rate === 'FREE' ? 'FREE ITEM' : `${item.rate} OFF`}</Text></Text>
+
+            {item.expiration && (
+               <View style={{ marginTop: spacing.xxs }}>
+                 <Text style={[typography.caption, { color: theme.textDisabled }]}> 
+                    Expires: {formatDate(item.expiration)}
                  </Text>
-               )}
-             </View>
-          )}
+                 {daysRemainingText && (
+                   <Text style={[typography.caption, { color: palette?.warning || theme.accentText, fontWeight: '700', marginTop: 2 }]}> 
+                      ⏳ {daysRemainingText}
+                   </Text>
+                 )}
+               </View>
+            )}
 
-          {isRedeemed && <Text style={[typography.caption, { color: theme.textMuted, marginTop: spacing.xxs, fontWeight: '700' }]}>STATUS: REDEEMED</Text>}
-          {isExpired && <Text style={[typography.caption, { color: palette.warning, marginTop: spacing.xxs, fontWeight: '700' }]}>STATUS: EXPIRED</Text>}
+            {isRedeemed && <Text style={[typography.caption, { color: theme.textMuted, marginTop: spacing.xxs, fontWeight: '700' }]}>STATUS: REDEEMED</Text>}
+            {isExpired && <Text style={[typography.caption, { color: palette.warning, marginTop: spacing.xxs, fontWeight: '700' }]}>STATUS: EXPIRED</Text>}
+          </View>
+          <View style={styles.couponRight}>
+             <TouchableOpacity
+                style={[styles.useBtn, { backgroundColor: buttonBg }]}
+                onPress={() => !isDisabled && openPosModal(item)}
+                disabled={isDisabled}
+                activeOpacity={0.85}
+             >
+                <Text style={styles.useBtnText}>{buttonLabel}</Text>
+             </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.couponRight}>
-           <TouchableOpacity 
-              style={[styles.useBtn, { backgroundColor: buttonBg }]} 
-              onPress={() => !isDisabled && openPosModal(item)}
-              disabled={isDisabled}
-              activeOpacity={0.85}
-           >
-              <Text style={styles.useBtnText}>{buttonLabel}</Text>
-           </TouchableOpacity>
-        </View>
-      </View>
+      </Swipeable>
     );
   };
 
@@ -257,7 +303,21 @@ const styles = StyleSheet.create({
   couponRight: { alignItems: 'center', justifyContent: 'center', marginLeft: spacing.md },
   useBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radii.md },
   useBtnText: { color: '#FFF', ...typography.labelSm },
-  dismissBtn: { position: 'absolute' as const, top: spacing.sm, right: spacing.sm, zIndex: 10 },
+  swipeRemoveAction: {
+    marginBottom: spacing.md,
+    borderRadius: radii.xl,
+    backgroundColor: palette.error,
+    width: 108,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xxs,
+    // Setting height to 100% ensures it matches the height of the row it sits next to
+    height: '100%',
+  },
+  swipeRemoveText: {
+    color: '#FFF',
+    ...typography.labelSm,
+  },
 
   posModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
   posModalBox: { width: '100%', borderRadius: radii.xl, padding: spacing.xl, alignItems: 'center' },

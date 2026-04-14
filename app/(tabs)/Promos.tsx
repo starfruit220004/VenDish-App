@@ -34,6 +34,10 @@ type PromoNavigationProp = DrawerNavigationProp<DrawerParamList>;
 const PROMOS_PAGE_SIZE = 6;
 const PROMOS_SCROLL_TOP_THRESHOLD = 550;
 
+const isPromoStatusActive = (status: Coupon['status'] | string | undefined): boolean => {
+  return String(status || '').trim().toLowerCase() === 'active';
+};
+
 export default function Promos() {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
@@ -155,9 +159,19 @@ export default function Promos() {
     fetchCoupons();
   }, []);
 
+  const claimedCouponIdSet = useMemo(() => {
+    return new Set(claimedCoupons.map((coupon) => coupon.id));
+  }, [claimedCoupons]);
+
   const visiblePromos = useMemo(
-    () => promos.filter((promo) => !dismissedPromoIds.includes(promo.id)),
-    [promos, dismissedPromoIds]
+    () =>
+      promos.filter(
+        (promo) =>
+          isPromoStatusActive(promo.status) &&
+          !claimedCouponIdSet.has(promo.id) &&
+          !dismissedPromoIds.includes(promo.id)
+      ),
+    [promos, claimedCouponIdSet, dismissedPromoIds]
   );
 
   const displayedPromos = useMemo(

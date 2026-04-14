@@ -29,6 +29,84 @@ import { getTheme, spacing, typography, radii, layout, palette } from '../../con
 
 const FEED_PAGE_SIZE = 8;
 const FEED_SCROLL_TOP_THRESHOLD = 550;
+const BEST_SELLER_FETCH_LIMIT = 20;
+
+type ApiProduct = {
+  id?: number | string;
+  product_name?: string;
+  description?: string | null;
+  image?: string | null;
+  category?: string | { name?: string } | null;
+  price?: number | string;
+  stock_quantity?: number | string;
+  is_available?: boolean;
+};
+
+type ApiCategory = {
+  name?: string | null;
+};
+
+type ApiReview = {
+  review_type?: string;
+  product?: number | string | null;
+  created_at?: string;
+};
+
+const toNumber = (value: unknown): number => {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const parseDateMs = (dateString?: string | null): number => {
+  if (!dateString) return 0;
+  const ms = new Date(dateString).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+};
+
+const getCurrentWeekStartMs = (): number => {
+  const reference = new Date();
+  const day = reference.getDay();
+  const mondayOffset = day === 0 ? 6 : day - 1;
+  reference.setHours(0, 0, 0, 0);
+  reference.setDate(reference.getDate() - mondayOffset);
+  return reference.getTime();
+};
+
+const extractArrayPayload = <T,>(value: unknown): T[] => {
+  if (Array.isArray(value)) {
+    return value as T[];
+  }
+
+  if (value && typeof value === 'object') {
+    const results = (value as { results?: unknown }).results;
+    if (Array.isArray(results)) {
+      return results as T[];
+    }
+  }
+
+  return [];
+};
+
+const isHttpNotFoundError = (reason: unknown): boolean => {
+  if (!reason || typeof reason !== 'object') {
+    return false;
+  }
+
+  const response = (reason as { response?: { status?: number } }).response;
+  return response?.status === 404;
+};
+
+const getCategoryLabel = (category: ApiProduct['category']): string => {
+  if (typeof category === 'string' && category.trim().length > 0) {
+    return category;
+  }
+
+  if (category && typeof category === 'object' && typeof category.name === 'string' && category.name.trim().length > 0) {
+    return category.name;
+  }
+
+  return 'Chef Special';
+};
 
 function FeedHome({ navigation }: any) {
   const { isFavorite } = useFavorites();
@@ -39,6 +117,7 @@ function FeedHome({ navigation }: any) {
 
   const [foods, setFoods] = useState<Food[]>([]);
   const [apiCategories, setApiCategories] = useState<string[]>([]);
+  const [bestSellerProductIds, setBestSellerProductIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [visibleFoodCount, setVisibleFoodCount] = useState(FEED_PAGE_SIZE);
@@ -50,43 +129,123 @@ function FeedHome({ navigation }: any) {
   const [selectedCategory, setSelectedCategory] = React.useState('All');
   const [showFilter, setShowFilter] = React.useState(false);
 
-  const fetchCategories = async () => {
+  const fetchBestSellerProductIds = useCallback(async (productsSnapshot: ApiProduct[]) => {
+    try {
+      const bestSellersResponse = await api.get(
+        `/firstapp/products/best-sellers/?period=weekly&limit=${BEST_SELLER_FETCH_LIMIT}`
+      );
+      const bestSellersRaw = extractArrayPayload<ApiProduct>(bestSellersResponse.data);
+      const bestSellerIds = bestSellersRaw
+        .map((item) => Math.trunc(toNumber(item.id)))
+        .filter((id) => id > 0);
+
+      if (bestSellerIds.length > 0) {
+        setBestSellerProductIds(bestSellerIds);
+        return;
+      }
+    } catch (error) {
+      if (isHttpNotFoundError(error)) {
+        console.warn('Best-sellers endpoint is unavailable on this backend. Falling back to review-based ranking for Feed.');
+      } else {
+        console.warn('Failed to load best-sellers endpoint for Feed. Falling back to review-based ranking.', error);
+      }
+    }
+
+    try {
+      const reviewsResponse = await api.get('/firstapp/reviews/');
+      const reviewsRaw = extractArrayPayload<ApiReview>(reviewsResponse.data);
+      const weekStartMs = getCurrentWeekStartMs();
+
+      const validProductIds = new Set(
+        productsSnapshot
+          .map((item) => Math.trunc(toNumber(item.id)))
+          .filter((id) => id > 0)
+      );
+
+      const reviewSignalByProduct = new Map<number, number>();
+      reviewsRaw.forEach((review) => {
+        if (review.review_type !== 'food') return;
+
+        const productId = Math.trunc(toNumber(review.product));
+        if (productId <= 0 || !validProductIds.has(productId)) return;
+        if (parseDateMs(review.created_at) < weekStartMs) return;
+
+        reviewSignalByProduct.set(productId, (reviewSignalByProduct.get(productId) || 0) + 1);
+      });
+
+      const fallbackBestSellerIds = [...reviewSignalByProduct.entries()]
+        .sort((a, b) => {
+          const signalDiff = b[1] - a[1];
+          if (signalDiff !== 0) return signalDiff;
+          return a[0] - b[0];
+        })
+        .slice(0, BEST_SELLER_FETCH_LIMIT)
+        .map(([productId]) => productId);
+
+      setBestSellerProductIds(fallbackBestSellerIds);
+    } catch (error) {
+      console.warn('Failed to compute Feed best-seller fallback ranking.', error);
+      setBestSellerProductIds([]);
+    }
+  }, []);
+
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await api.get('/firstapp/categories/');
-      const catNames = response.data.map((c: any) => c.name).filter(Boolean);
-      setApiCategories(catNames);
+      const categoriesRaw = extractArrayPayload<ApiCategory>(response.data);
+      const uniqueNames = Array.from(
+        new Set(
+          categoriesRaw
+            .map((category) => (typeof category.name === 'string' ? category.name.trim() : ''))
+            .filter((name) => name.length > 0)
+        )
+      );
+      setApiCategories(uniqueNames);
     } catch (error) {
-      console.error("Failed to fetch categories:", error);
+      console.error('Failed to fetch categories:', error);
     }
-  };
+  }, []);
 
-  const fetchFoods = async () => {
+  const fetchFoods = useCallback(async () => {
     try {
       const response = await api.get('/firstapp/products/');
-      const mappedFoods = response.data.map((item: any) => ({
-        id: item.id,
-        name: item.product_name,
-        description: item.description || `Delicious ${item.category} dish`,
-        image: item.image ? { uri: item.image } : require('../../assets/images/Logo2.jpg'),
-        category: item.category,
-        price: Number(item.price),
-        servings: Number(item.stock_quantity ?? 0), 
-        isAvailable: item.is_available, 
-      }));
+      const productsRaw = extractArrayPayload<ApiProduct>(response.data);
+
+      const mappedFoods: Food[] = productsRaw
+        .map((item) => ({
+          id: Math.trunc(toNumber(item.id)),
+          name:
+            typeof item.product_name === 'string' && item.product_name.trim().length > 0
+              ? item.product_name
+              : 'Featured Dish',
+          description:
+            typeof item.description === 'string' && item.description.trim().length > 0
+              ? item.description
+              : `Delicious ${getCategoryLabel(item.category)} dish`,
+          image: item.image ? { uri: item.image } : require('../../assets/images/Logo2.jpg'),
+          category: getCategoryLabel(item.category),
+          price: toNumber(item.price),
+          servings: Math.max(0, Math.trunc(toNumber(item.stock_quantity))),
+          isAvailable: Boolean(item.is_available),
+        }))
+        .filter((food) => food.id > 0);
+
       setFoods(mappedFoods);
+      void fetchBestSellerProductIds(productsRaw);
     } catch (error) {
-      console.error("Failed to fetch foods:", error);
+      console.error('Failed to fetch foods:', error);
+      setBestSellerProductIds([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchBestSellerProductIds]);
 
   useFocusEffect(
     useCallback(() => {
       refreshReviews();
       fetchFoods();
       fetchCategories();
-    }, [refreshReviews])
+    }, [refreshReviews, fetchFoods, fetchCategories])
   );
 
   const onRefresh = useCallback(async () => {
@@ -98,17 +257,53 @@ function FeedHome({ navigation }: any) {
     } finally {
       setIsRefreshing(false);
     }
-  }, [refreshReviews]);
+  }, [refreshReviews, fetchFoods, fetchCategories]);
 
   const dynamicCategories = useMemo(() => {
     return ['All', ...apiCategories];
   }, [apiCategories]);
 
-  const filteredFoods = foods.filter(food => {
-    const matchesSearch = food.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || food.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const bestSellerRankById = useMemo(() => {
+    const rankMap = new Map<number, number>();
+    bestSellerProductIds.forEach((id, index) => {
+      const normalizedId = Math.trunc(toNumber(id));
+      if (normalizedId > 0 && !rankMap.has(normalizedId)) {
+        rankMap.set(normalizedId, index);
+      }
+    });
+    return rankMap;
+  }, [bestSellerProductIds]);
+
+  const filteredFoods = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    return foods
+      .filter((food) => {
+        const matchesSearch = food.name.toLowerCase().includes(normalizedQuery);
+        const matchesCategory = selectedCategory === 'All' || food.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+      })
+      .map((food, index) => ({
+        food,
+        index,
+        bestSellerRank: bestSellerRankById.get(food.id),
+      }))
+      .sort((a, b) => {
+        const aIsBestSeller = typeof a.bestSellerRank === 'number';
+        const bIsBestSeller = typeof b.bestSellerRank === 'number';
+
+        if (aIsBestSeller && bIsBestSeller) {
+          return (a.bestSellerRank as number) - (b.bestSellerRank as number);
+        }
+
+        if (aIsBestSeller !== bIsBestSeller) {
+          return aIsBestSeller ? -1 : 1;
+        }
+
+        return a.index - b.index;
+      })
+      .map(({ food }) => food);
+  }, [foods, searchQuery, selectedCategory, bestSellerRankById]);
 
   useEffect(() => {
     setVisibleFoodCount(FEED_PAGE_SIZE);
@@ -153,6 +348,7 @@ function FeedHome({ navigation }: any) {
 
   const renderFoodItem = ({ item: food }: { item: Food }) => {
     const status = getStatusDisplay(food.isAvailable);
+    const isBestSeller = bestSellerRankById.has(food.id);
 
     return (
       <TouchableOpacity
@@ -166,6 +362,13 @@ function FeedHome({ navigation }: any) {
       >
         <View style={styles.imageContainer}>
           <Image source={food.image} style={styles.image} resizeMode="cover" />
+
+          {isBestSeller && (
+            <View style={[styles.bestSellerBadge, { backgroundColor: theme.accent }]}> 
+              <Ionicons name="flame" size={11} color="#FFFFFF" />
+              <Text style={styles.bestSellerText}>Best Seller</Text>
+            </View>
+          )}
 
           {isFavorite(food.id) && (
             <View style={[styles.favoriteBadge, { backgroundColor: theme.accent }]}> 
@@ -512,6 +715,22 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   image: { width: '100%', height: '100%' },
+  bestSellerBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.xxs,
+  },
+  bestSellerText: {
+    ...typography.labelSm,
+    color: '#FFFFFF',
+  },
   favoriteBadge: {
     position: 'absolute',
     top: spacing.sm,

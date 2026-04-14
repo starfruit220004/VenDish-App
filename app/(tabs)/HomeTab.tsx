@@ -186,6 +186,26 @@ const getReviewerDisplayName = (review: ApiReview): string => {
   return trimText(review.username, 'Anonymous Customer');
 };
 
+const getDayOfYear = (date: Date): number => {
+  const startOfYear = new Date(date.getFullYear(), 0, 1);
+  const currentDayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const msDiff = currentDayStart.getTime() - startOfYear.getTime();
+  return Math.floor(msDiff / 86400000) + 1;
+};
+
+const pickShopReviewSpotlight = (reviews: ApiReview[]): ApiReview | null => {
+  const fiveStarShopReviews = reviews
+    .filter((review) => review.review_type === 'shop' && Math.round(toNumber(review.rating)) === 5)
+    .sort((a, b) => toNumber(a.id) - toNumber(b.id));
+
+  if (fiveStarShopReviews.length === 0) {
+    return null;
+  }
+
+  const rotationIndex = Math.max(0, (getDayOfYear(new Date()) - 1) % fiveStarShopReviews.length);
+  return fiveStarShopReviews[rotationIndex];
+};
+
 const shorten = (text: string, maxLength: number): string => {
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength - 1).trimEnd()}...`;
@@ -422,9 +442,7 @@ export default function HomeTab() {
           .slice(0, 2)
       );
 
-      const fiveStarShopReview = [...reviewsRaw]
-        .filter((review) => review.review_type === 'shop' && Math.round(toNumber(review.rating)) >= 5)
-        .sort((a, b) => parseDateMs(b.created_at) - parseDateMs(a.created_at))[0];
+      const fiveStarShopReview = pickShopReviewSpotlight(reviewsRaw);
 
       if (fiveStarShopReview) {
         const spotlightRating = Math.max(0, Math.min(5, Math.round(toNumber(fiveStarShopReview.rating))));
