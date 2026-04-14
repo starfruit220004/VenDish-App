@@ -20,6 +20,7 @@ function ShopReviewsHome({ navigation }: any) {
   const { isLoggedIn, userData, refreshUserData } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
+  const [modalType, setModalType] = useState<'info' | 'auth'>('info');
   const [refreshing, setRefreshing] = useState(false);
   const [showMyReviews, setShowMyReviews] = useState(false);
   const [visibleReviewCount, setVisibleReviewCount] = useState(REVIEWS_PAGE_SIZE);
@@ -117,10 +118,33 @@ function ShopReviewsHome({ navigation }: any) {
     return reviewUsername.toLowerCase() === userData.username.toLowerCase();
   };
 
+  const showAuthModal = (message: string) => {
+    setModalType('auth');
+    setModalMessage(message);
+    setShowModal(true);
+  };
+
+  const navigateToLogin = () => {
+    setShowModal(false);
+
+    const drawerNavigation = navigation.getParent?.()?.getParent?.();
+    if (drawerNavigation?.navigate) {
+      drawerNavigation.navigate('Login');
+      return;
+    }
+
+    const parentNavigation = navigation.getParent?.();
+    if (parentNavigation?.navigate) {
+      parentNavigation.navigate('Login');
+      return;
+    }
+
+    navigation.navigate('Login');
+  };
+
   const toggleMyReviews = () => {
     if (!isLoggedIn) {
-      setModalMessage('Please login first to view your reviews');
-      setShowModal(true);
+      showAuthModal('Please login first to view your reviews');
       return;
     }
 
@@ -326,8 +350,7 @@ function ShopReviewsHome({ navigation }: any) {
                   style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
                   onPress={() => {
                     if (!isLoggedIn) {
-                      setModalMessage('Please login first to write a review');
-                      setShowModal(true);
+                      showAuthModal('Please login first to write a review');
                       return;
                     }
                     navigation.navigate('WriteShopReview');
@@ -384,8 +407,7 @@ function ShopReviewsHome({ navigation }: any) {
                 style={[styles.firstReviewButton, { backgroundColor: theme.accent }]}
                 onPress={() => {
                   if (!isLoggedIn) {
-                    setModalMessage('Please login first to write a review');
-                    setShowModal(true);
+                    showAuthModal('Please login first to write a review');
                     return;
                   }
                   navigation.navigate('WriteShopReview');
@@ -426,16 +448,54 @@ function ShopReviewsHome({ navigation }: any) {
       {showModal && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={{ backgroundColor: theme.surface, padding: 20, borderRadius: radii.lg, width: '80%', alignItems: 'center' }}>
-            <Ionicons name="alert-circle-outline" size={32} color={theme.accent} style={{ marginBottom: 10 }} />
+            <Ionicons
+              name={modalType === 'auth' ? 'lock-closed-outline' : 'alert-circle-outline'}
+              size={32}
+              color={theme.accent}
+              style={{ marginBottom: 10 }}
+            />
             <Text style={{ ...typography.labelLg, color: theme.textPrimary, marginBottom: 20, textAlign: 'center' }}>
               {modalMessage}
             </Text>
-            <TouchableOpacity
-              style={{ paddingVertical: 10, paddingHorizontal: 20, backgroundColor: theme.accent, borderRadius: radii.md }}
-              onPress={() => setShowModal(false)}
-            >
-              <Text style={{ ...typography.labelMd, color: '#FFF' }}>OK</Text>
-            </TouchableOpacity>
+
+            {modalType === 'auth' ? (
+              <View style={{ flexDirection: 'row', width: '100%', gap: spacing.sm }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: radii.md,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  onPress={() => setShowModal(false)}
+                >
+                  <Text style={{ ...typography.labelMd, color: theme.textMuted }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    backgroundColor: theme.accent,
+                    borderRadius: radii.md,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  onPress={navigateToLogin}
+                >
+                  <Text style={{ ...typography.labelMd, color: '#FFF' }}>Login</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={{ paddingVertical: 10, paddingHorizontal: 20, backgroundColor: theme.accent, borderRadius: radii.md }}
+                onPress={() => setShowModal(false)}
+              >
+                <Text style={{ ...typography.labelMd, color: '#FFF' }}>OK</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       )}

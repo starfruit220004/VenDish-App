@@ -20,6 +20,7 @@ export default function FoodDetail({ route, navigation }: any) {
 
   const [showModal, setShowModal] = React.useState(false);
   const [modalMessage, setModalMessage] = React.useState('');
+  const [modalType, setModalType] = React.useState<'info' | 'auth'>('info');
   const [showAllReviews, setShowAllReviews] = React.useState(false);
   const [servings, setServings] = React.useState(Number(food.servings ?? food.stock ?? 0));
   const [isAvailable, setIsAvailable] = React.useState(Boolean(food.isAvailable ?? food.is_available ?? servings > 0));
@@ -64,21 +65,53 @@ export default function FoodDetail({ route, navigation }: any) {
     return reviewUsername.toLowerCase() === userData.username.toLowerCase();
   };
 
+  const showInfoModal = (message: string) => {
+    setModalType('info');
+    setModalMessage(message);
+    setShowModal(true);
+  };
+
+  const showAuthModal = (message: string) => {
+    setModalType('auth');
+    setModalMessage(message);
+    setShowModal(true);
+  };
+
+  const navigateToLogin = () => {
+    setShowModal(false);
+
+    const drawerNavigation = navigation.getParent?.()?.getParent?.();
+    if (drawerNavigation?.navigate) {
+      drawerNavigation.navigate('Login');
+      return;
+    }
+
+    const parentNavigation = navigation.getParent?.();
+    if (parentNavigation?.navigate) {
+      parentNavigation.navigate('Login');
+      return;
+    }
+
+    navigation.navigate('Login');
+  };
+
   const handleFavoriteToggle = () => {
-    if (!isLoggedIn && !isFav) {
-      setModalMessage('Please login first to add favorites');
-      setShowModal(true);
+    if (!isLoggedIn) {
+      if (isFav) {
+        showAuthModal('Log in to your account to edit your favorites');
+      } else {
+        showAuthModal('Please login first to add favorites');
+      }
       return;
     }
 
     if (isFav) {
       removeFavorite(food.id);
-      setModalMessage(`${food.name} removed from favorites!`);
+      showInfoModal(`${food.name} removed from favorites!`);
     } else {
       addFavorite(food);
-      setModalMessage(`${food.name} added to favorites!`);
+      showInfoModal(`${food.name} added to favorites!`);
     }
-    setShowModal(true);
   };
 
   const getStockStatus = (isAvailable: boolean, stock: number) => {
@@ -223,8 +256,10 @@ export default function FoodDetail({ route, navigation }: any) {
           >
             <Ionicons name={isFav ? 'heart' : 'heart-outline'} size={22} color="#FFFFFF" />
             <Text style={styles.favoriteButtonText}>
-              {!isLoggedIn && !isFav
-                ? 'Login to Add Favorites'
+              {!isLoggedIn
+                ? isFav
+                  ? 'Login to Edit Favorites'
+                  : 'Login to Add Favorites'
                 : isFav
                 ? 'Remove from Favorites'
                 : 'Add to Favorites'}
@@ -358,8 +393,7 @@ export default function FoodDetail({ route, navigation }: any) {
             style={[styles.writeReviewButton, { backgroundColor: theme.accent }]}
             onPress={() => {
               if (!isLoggedIn) {
-                setModalMessage('Please login first to write a review');
-                setShowModal(true);
+                showAuthModal('Please login first to write a review');
                 return;
               }
               navigation.navigate("WriteReview", { food });
@@ -383,23 +417,55 @@ export default function FoodDetail({ route, navigation }: any) {
       <Modal visible={showModal} transparent animationType="fade">
         <View style={[styles.modalOverlay, { backgroundColor: theme.modalOverlay }]}>
           <View style={[styles.modalBox, { backgroundColor: theme.surface }, theme.cardShadowHeavy]}>
-            <View style={[styles.modalIconWrap, { backgroundColor: isFav ? theme.accentSoft : theme.surfaceElevated }]}>
+            <View
+              style={[
+                styles.modalIconWrap,
+                {
+                  backgroundColor:
+                    modalType === 'auth'
+                      ? theme.accentSoft
+                      : isFav
+                      ? theme.accentSoft
+                      : theme.surfaceElevated,
+                },
+              ]}
+            >
               <Ionicons
-                name={isFav ? "heart" : "heart-dislike"}
+                name={modalType === 'auth' ? 'lock-closed' : isFav ? 'heart' : 'heart-dislike'}
                 size={32}
-                color={isFav ? theme.accent : theme.textMuted}
+                color={modalType === 'auth' ? theme.accent : isFav ? theme.accent : theme.textMuted}
               />
             </View>
             <Text style={[styles.modalText, { color: theme.textPrimary }]}>
               {modalMessage}
             </Text>
-            <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: theme.accent }]}
-              onPress={() => setShowModal(false)}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.modalButtonText}>OK</Text>
-            </TouchableOpacity>
+
+            {modalType === 'auth' ? (
+              <View style={styles.modalButtonRow}>
+                <TouchableOpacity
+                  style={[styles.modalSecondaryButton, { borderColor: theme.border }]}
+                  onPress={() => setShowModal(false)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.modalSecondaryButtonText, { color: theme.textMuted }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalPrimaryButton, { backgroundColor: theme.accent }]}
+                  onPress={navigateToLogin}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.modalButtonText}>Login</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: theme.accent }]}
+                onPress={() => setShowModal(false)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.modalButtonText}>OK</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Modal>
@@ -650,6 +716,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing['2xl'],
     textAlign: 'center',
   },
+  modalButtonRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: spacing.sm,
+  },
+  modalSecondaryButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSecondaryButtonText: { ...typography.labelLg },
   modalButton: {
     borderRadius: radii.md,
     paddingVertical: spacing.md,
@@ -657,5 +737,6 @@ const styles = StyleSheet.create({
     minWidth: 100,
     alignItems: 'center',
   },
+  modalPrimaryButton: { flex: 1 },
   modalButtonText: { color: '#FFFFFF', ...typography.labelLg },
 });

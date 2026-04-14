@@ -128,6 +128,7 @@ export default function WalletTab() {
                <Text style={[typography.caption, { color: theme.textDisabled }]}>
                   Expires: {formatDate(item.expiration)}
                </Text>
+               {/* ⏳ Days Remaining Counter */}
                {daysRemainingText && (
                  <Text style={[typography.caption, { color: palette?.warning || theme.accentText, fontWeight: '700', marginTop: 2 }]}>
                     ⏳ {daysRemainingText}

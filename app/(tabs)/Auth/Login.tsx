@@ -112,7 +112,7 @@ export default function Login() {
       [{
         label: 'OK',
         onPress: () => {
-          navigation.navigate('Tabs', { screen: 'FeedTab' });
+          navigation.navigate('Tabs', { screen: 'Feed' });
         },
       }]
     );

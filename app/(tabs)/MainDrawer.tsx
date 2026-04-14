@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   useColorScheme,
   StyleSheet,
@@ -10,7 +10,12 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { createDrawerNavigator, DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer';
+import { 
+  createDrawerNavigator, 
+  DrawerContentScrollView, 
+  DrawerContentComponentProps,
+  useDrawerStatus // Added this import
+} from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 
 // --- IMPORTS ---
@@ -60,7 +65,17 @@ function CustomDrawerContent(props: CustomDrawerContentProps) {
   const isDark = scheme === 'dark';
   const theme = getTheme(isDark);
   const { isLoggedIn, logout } = useAuth();
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(true);
+
+  // Track if the drawer is open or closed
+  const drawerStatus = useDrawerStatus();
+
+  // Reset the dropdown to open whenever the drawer opens
+  useEffect(() => {
+    if (drawerStatus === 'open') {
+      setSettingsOpen(true);
+    }
+  }, [drawerStatus]);
 
   const settingsItems: {
     screen: 'PrivacyPolicy' | 'TermsAndConditions' | 'About';
@@ -164,14 +179,15 @@ function CustomDrawerContent(props: CustomDrawerContentProps) {
             <Text style={[styles.menuTitle, { color: theme.textPrimary }]}>FAQ</Text>
           </TouchableOpacity>
 
-          {/* Settings Group */}
+          {/* Legal & About Group */}
           <TouchableOpacity
             style={styles.menuItem}
             activeOpacity={0.7}
             onPress={toggleSettings}
           >
-            <Ionicons name="settings-outline" size={22} color={theme.textPrimary} style={styles.menuIcon} />
-            <Text style={[styles.menuTitle, { color: theme.textPrimary }]}>Settings & Info</Text>
+            {/* Updated the icon to match the new label */}
+            <Ionicons name="information-circle-outline" size={22} color={theme.textPrimary} style={styles.menuIcon} />
+            <Text style={[styles.menuTitle, { color: theme.textPrimary }]}>Legal & About</Text>
             <Ionicons name={settingsOpen ? 'chevron-up' : 'chevron-down'} size={18} color={theme.textDisabled} />
           </TouchableOpacity>
 

@@ -6,10 +6,12 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
+  Modal,
   useColorScheme,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavorites } from './FavoritesContext';
+import { useAuth } from '../context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getTheme, spacing, typography, radii, layout, palette } from '../../constants/theme';
 
@@ -19,6 +21,34 @@ function FavoritesTab({ navigation }: any) {
   const theme = getTheme(isDark);
 
   const { favorites, removeFavorite } = useFavorites();
+  const { isLoggedIn } = useAuth();
+  const [showAuthModal, setShowAuthModal] = React.useState(false);
+
+  const navigateToLogin = () => {
+    setShowAuthModal(false);
+
+    navigation.navigate('Login');
+
+    const drawerNavigation = navigation.getParent?.()?.getParent?.();
+    if (drawerNavigation?.navigate) {
+      return;
+    }
+
+    const parentNavigation = navigation.getParent?.();
+    if (parentNavigation?.navigate) {
+      parentNavigation.navigate('Login');
+      return;
+    }
+  };
+
+  const handleRemoveFavorite = (id: number) => {
+    if (!isLoggedIn) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    removeFavorite(id);
+  };
 
   const renderStars = (rating: number) => (
     <View style={styles.starsContainer}>
@@ -53,7 +83,7 @@ function FavoritesTab({ navigation }: any) {
         </View>
         <TouchableOpacity
           style={[styles.removeButton, { backgroundColor: isDark ? theme.surfaceElevated : 'rgba(255,255,255,0.95)' }]}
-          onPress={() => removeFavorite(item.id)}
+          onPress={() => handleRemoveFavorite(item.id)}
           activeOpacity={0.8}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
@@ -86,16 +116,16 @@ function FavoritesTab({ navigation }: any) {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? theme.background : 'transparent' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? theme.background : 'transparent' }]}> 
       {favorites.length === 0 ? (
         renderEmptyState()
       ) : (
         <>
           <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: theme.accentText }]}>
+            <Text style={[styles.headerTitle, { color: theme.accentText }]}> 
               My Favorites
             </Text>
-            <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>
+            <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}> 
               {favorites.length} {favorites.length === 1 ? 'dish' : 'dishes'} saved
             </Text>
           </View>
@@ -110,6 +140,35 @@ function FavoritesTab({ navigation }: any) {
           />
         </>
       )}
+
+      <Modal visible={showAuthModal} transparent animationType="fade">
+        <View style={[styles.modalOverlay, { backgroundColor: theme.modalOverlay }]}> 
+          <View style={[styles.modalBox, { backgroundColor: theme.surface }, theme.cardShadowHeavy]}>
+            <View style={[styles.modalIconWrap, { backgroundColor: theme.accentSoft }]}> 
+              <Ionicons name="lock-closed" size={30} color={theme.accent} />
+            </View>
+            <Text style={[styles.modalText, { color: theme.textPrimary }]}> 
+              Log in to your account to edit your favorites
+            </Text>
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity
+                style={[styles.modalSecondaryButton, { borderColor: theme.border }]}
+                onPress={() => setShowAuthModal(false)}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.modalSecondaryButtonText, { color: theme.textMuted }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalPrimaryButton, { backgroundColor: theme.accent }]}
+                onPress={navigateToLogin}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.modalPrimaryButtonText}>Login</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -182,6 +241,59 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...typography.headingMd, marginBottom: spacing.md },
   emptyText: { ...typography.bodyLg, textAlign: 'center' as const },
+
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: spacing['2xl'],
+  },
+  modalBox: {
+    width: '100%',
+    borderRadius: radii.xl,
+    padding: spacing.xl,
+    alignItems: 'center' as const,
+  },
+  modalIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: radii.full,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginBottom: spacing.lg,
+  },
+  modalText: {
+    ...typography.bodyLg,
+    textAlign: 'center' as const,
+    marginBottom: spacing.xl,
+  },
+  modalButtonRow: {
+    flexDirection: 'row' as const,
+    width: '100%',
+    gap: spacing.sm,
+  },
+  modalSecondaryButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.sm,
+    alignItems: 'center' as const,
+  },
+  modalSecondaryButtonText: {
+    ...typography.labelMd,
+    fontWeight: '700' as const,
+  },
+  modalPrimaryButton: {
+    flex: 1,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.sm,
+    alignItems: 'center' as const,
+  },
+  modalPrimaryButtonText: {
+    ...typography.labelMd,
+    color: '#FFFFFF',
+    fontWeight: '700' as const,
+  },
 });
 
 export default FavoritesTab;

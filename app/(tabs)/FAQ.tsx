@@ -26,7 +26,7 @@ export default function FAQScreen() {
     },
     { 
       question: "Can I filter foods by category?", 
-      answer: "Yes! Use the Filter button on the Food Log screen to filter by categories like Main Course, Appetizer, Soup, Dessert, and Noodles.",
+      answer: "Yes! Use the Filter button on the Food Log screen to filter by categories like Fried Chicken, Beef Menu, Desserts, and Noodles.",
       category: "Features"
     },
     { 
@@ -46,17 +46,17 @@ export default function FAQScreen() {
     },
     { 
       question: "How do I contact support?", 
-      answer: "Send us an email at support@foodlogapp.com anytime. We typically respond within 24 hours on business days.",
+      answer: "Send us an email at gentech2025@gmail.com anytime. We typically respond within 24 hours on business days.",
       category: "Support"
     },
     { 
       question: "Can I suggest new Filipino dishes?", 
-      answer: "Absolutely! We'd love to hear your suggestions. Email us at suggestions@foodlogapp.com with the dish name and description.",
+      answer: "Absolutely! We'd love to hear your suggestions. Email us at kuyavince@gmail.com with the dish name and description.",
       category: "Support"
     },
     { 
       question: "Is the app available in other languages?", 
-      answer: "Currently, the app is available in English. We're working on adding Filipino (Tagalog) and other regional languages soon.",
+      answer: "Currently, the app is available in English only.",
       category: "Features"
     },
   ];
