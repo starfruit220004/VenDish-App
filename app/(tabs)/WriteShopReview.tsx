@@ -198,7 +198,7 @@ export default function WriteShopReview({ navigation, route }: WriteShopReviewPr
           <Ionicons name="arrow-back" size={26} color={isDarkMode ? '#FFFFFF' : '#B71C1C'} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: isDarkMode ? '#FF5252' : '#B71C1C' }]}>
-          {isEditMode ? 'Edit Shop Review' : 'Review Shop'}
+          {isEditMode ? 'Edit Shop Review' : 'Review Shop'} 
         </Text>
         <View style={{ width: 40 }} />
       </View>
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    paddingTop: 50,
+    paddingTop: 16,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

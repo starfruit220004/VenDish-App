@@ -77,6 +77,7 @@ const DEFAULT_BUSINESS_DETAILS: BusinessDetails = {
 
 const BEST_SELLERS_DEFAULT_SUBTITLE = 'Top-performing dishes based on completed orders this week';
 const BEST_SELLERS_FALLBACK_SUBTITLE = 'Popular dishes based on current customer review activity';
+const BEST_SELLER_EXCLUDED_CATEGORY_KEYS = new Set(['addon', 'addons', 'other', 'others']);
 
 const DEFAULT_REVIEW_SPOTLIGHT: HomeReviewSpotlight = {
   reviewerName: 'No featured reviewer yet',
@@ -216,6 +217,19 @@ const getCategoryLabel = (category: ApiProduct['category']): string => {
   return trimText(category?.name, 'Chef Special');
 };
 
+const normalizeBestSellerCategoryKey = (value: unknown): string =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+const isBestSellerEligibleCategory = (category: ApiProduct['category']): boolean => {
+  const categoryName = typeof category === 'string' ? category : category?.name;
+  const normalized = normalizeBestSellerCategoryKey(categoryName);
+  if (!normalized) return true;
+  return !BEST_SELLER_EXCLUDED_CATEGORY_KEYS.has(normalized);
+};
+
 const mapHomeProduct = (item: ApiProduct): HomeProduct => {
   const category = getCategoryLabel(item.category);
 
@@ -288,7 +302,9 @@ export default function HomeTab() {
 
       const weeklyBestSellersRawFromEndpoint: ApiProduct[] =
         bestSellersResult.status === 'fulfilled'
-          ? extractArrayPayload<ApiProduct>(bestSellersResult.value.data)
+          ? extractArrayPayload<ApiProduct>(bestSellersResult.value.data).filter((product) =>
+              isBestSellerEligibleCategory(product.category)
+            )
           : [];
 
       const topRatedRawFromEndpoint: ApiProduct[] =
@@ -327,6 +343,18 @@ export default function HomeTab() {
         const normalizedId = Math.trunc(toNumber(product.id));
         if (normalizedId > 0 && product.is_archived !== true && !productById.has(normalizedId)) {
           productById.set(normalizedId, product);
+        }
+      });
+
+      const bestSellerEligibleProductIds = new Set<number>();
+      productsRaw.forEach((product) => {
+        const normalizedId = Math.trunc(toNumber(product.id));
+        if (
+          normalizedId > 0 &&
+          product.is_archived !== true &&
+          isBestSellerEligibleCategory(product.category)
+        ) {
+          bestSellerEligibleProductIds.add(normalizedId);
         }
       });
 
@@ -377,7 +405,7 @@ export default function HomeTab() {
         reviewsRaw.forEach((review) => {
           if (review.review_type !== 'food') return;
           const productId = Math.trunc(toNumber(review.product));
-          if (productId <= 0 || !productById.has(productId)) return;
+          if (productId <= 0 || !bestSellerEligibleProductIds.has(productId)) return;
           if (parseDateMs(review.created_at) < weekStartMs) return;
 
           weeklyReviewSignal.set(productId, (weeklyReviewSignal.get(productId) || 0) + 1);
@@ -418,7 +446,9 @@ export default function HomeTab() {
           resolvedBestSellersRaw = weeklyFallback;
           usedBestSellerFallback = true;
         } else if (resolvedTopRatedRaw.length > 0) {
-          resolvedBestSellersRaw = resolvedTopRatedRaw;
+          resolvedBestSellersRaw = resolvedTopRatedRaw.filter((product) =>
+            isBestSellerEligibleCategory(product.category)
+          );
           usedBestSellerFallback = true;
         }
       }

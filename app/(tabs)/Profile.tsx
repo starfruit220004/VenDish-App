@@ -7,7 +7,6 @@ import {
   TouchableOpacity, 
   ScrollView, 
   useColorScheme, 
-  Modal,
   TextInput,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -20,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { deactivateAccount } from '../services/authServices';
 import api from '../../api/api';
 import FeedbackModal, { FeedbackAction, FeedbackVariant } from './FeedbackModal';
+import DeactivateModal from '../Components/DeativationModal'; // <-- IMPORT NEW MODAL
 import { getTheme, spacing, typography, radii, palette } from '../../constants/theme';
 
 const PH_MOBILE_DIGITS = 11;
@@ -89,9 +89,8 @@ export default function Profile() {
 
   // Modal State
   const [isDeactivateModalVisible, setDeactivateModalVisible] = useState(false);
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // NEW STATE FOR PASSWORD VISIBILITY
   const [isLoading, setIsLoading] = useState(false);
+  
   const [feedbackModal, setFeedbackModal] = useState<{
     visible: boolean;
     title: string;
@@ -315,21 +314,23 @@ export default function Profile() {
 
   const handleDeactivate = () => {
     setDeactivateModalVisible(true);
-    setPassword('');
-    setShowPassword(false); // Reset visibility when opening
   };
 
-  const confirmDeactivation = async () => {
-    if (!password) {
+  const handleViewTransactions = () => {
+    (navigation as any).navigate('TransactionHistory');
+  };
+
+  // Logic shifted to expect password from the child component
+  const confirmDeactivation = async (submittedPassword: string) => {
+    if (!submittedPassword) {
       showFeedback('Error', 'Please enter your password to confirm.', 'error');
       return;
     }
 
     setIsLoading(true);
     try {
-      await deactivateAccount(password);
+      await deactivateAccount(submittedPassword);
       setDeactivateModalVisible(false);
-      setPassword('');
 
       showFeedback(
         'Success',
@@ -601,6 +602,16 @@ export default function Profile() {
           <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Account</Text>
           
           <View style={[styles.infoCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+
+              <TouchableOpacity style={styles.menuItem} onPress={handleViewTransactions}>
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="receipt-outline" size={22} color={theme.textPrimary} />
+                  <Text style={[styles.menuItemText, { color: theme.textPrimary }]}>View POS Transactions</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+              </TouchableOpacity>
+
+              <View style={[styles.divider, { backgroundColor: theme.borderSubtle }]} />
               
               <TouchableOpacity style={styles.menuItem} onPress={handleDeactivate}>
                   <View style={styles.menuItemLeft}>
@@ -622,94 +633,13 @@ export default function Profile() {
         </View>
       </ScrollView>
 
-      {/* --- DEACTIVATION CONFIRMATION MODAL --- */}
-      <Modal
+      {/* --- EXTERNAL DEACTIVATION CONFIRMATION MODAL --- */}
+      <DeactivateModal
         visible={isDeactivateModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setDeactivateModalVisible(false)}
-      >
-        <KeyboardAvoidingView 
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={[styles.modalOverlay, { backgroundColor: theme.modalOverlay }]}
-        >
-          <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
-            <View style={styles.modalHeader}>
-                <View style={[styles.warningIcon, { backgroundColor: palette.errorSoft }]}>
-                     <Ionicons name="warning" size={32} color={palette.error} />
-                </View>
-                <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
-                    Deactivate Account?
-                </Text>
-            </View>
-            
-            <Text style={[styles.modalText, { color: theme.textSecondary }]}>
-              This action will log you out immediately. Your account will be permanently deleted after 30 days unless you reactivate it.
-            </Text>
-
-            <Text style={[styles.label, { color: theme.textPrimary }]}>
-                Confirm Password
-            </Text>
-            
-            {/* UPDATED PASSWORD INPUT CONTAINER */}
-            <View style={[
-                styles.inputContainer, 
-                { 
-                    borderColor: theme.border,
-                    backgroundColor: theme.surfaceElevated
-                }
-            ]}>
-              <TextInput
-                style={[
-                    styles.passwordInput, 
-                    { color: theme.textPrimary }
-                ]}
-                placeholder="Enter your password"
-                placeholderTextColor={theme.textDisabled}
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity 
-                  onPress={() => setShowPassword(!showPassword)} 
-                  style={{ padding: spacing.xs }}
-              >
-                  <Ionicons 
-                      name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                      size={20} 
-                      color={theme.textMuted} 
-                  />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: theme.surfaceElevated }]}
-                onPress={() => {
-                    setDeactivateModalVisible(false);
-                    setPassword('');
-                }}
-                disabled={isLoading}
-              >
-                <Text style={[styles.cancelButtonText, { color: theme.textPrimary }]}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalButton, styles.deleteButton]}
-                onPress={confirmDeactivation}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                    <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                    <Text style={styles.deleteButtonText}>Deactivate</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        isLoading={isLoading}
+        onClose={() => setDeactivateModalVisible(false)}
+        onConfirm={confirmDeactivation}
+      />
 
       <FeedbackModal
         visible={feedbackModal.visible}
@@ -785,81 +715,4 @@ const styles = StyleSheet.create({
   menuItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.lg },
   menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md},
   menuItemText: { ...typography.bodyLg, fontWeight: '500' as const },
-
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  modalContent: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: radii['2xl'],
-    padding: spacing.xl,
-  },
-  modalHeader: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  warningIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: radii.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  modalTitle: {
-    ...typography.headingMd,
-    textAlign: 'center',
-  },
-  modalText: {
-    ...typography.bodySm,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-    lineHeight: 20,
-  },
-  label: {
-    ...typography.labelSm,
-    marginBottom: spacing.sm,
-    alignSelf: 'flex-start',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    borderWidth: 1,
-    borderRadius: radii.lg,
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.md,
-    height: 52,
-  },
-  passwordInput: {
-    flex: 1,
-    height: '100%',
-    ...typography.bodyMd,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteButton: {
-    backgroundColor: palette.error,
-  },
-  cancelButtonText: {
-    ...typography.labelMd,
-  },
-  deleteButtonText: {
-    color: '#FFF',
-    ...typography.labelMd,
-  },
 });

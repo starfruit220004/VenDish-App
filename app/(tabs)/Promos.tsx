@@ -201,7 +201,9 @@ export default function Promos() {
     if (isLoggedIn) {
       try {
         // Token is automatically attached by the API interceptor
-        await api.post(`/firstapp/coupons/${promo.id}/claim/`);
+        const claimResponse = await api.post(`/firstapp/coupons/${promo.id}/claim/`);
+        const claimedFromApi = claimResponse?.data || {};
+        const expiration = claimedFromApi.criteria_details?.valid_to || claimedFromApi.valid_to || promo.expiration || null;
 
         // Update local state
         setPromos(prevPromos => 
@@ -211,7 +213,14 @@ export default function Promos() {
         );
 
         // Update Context
-        const updatedPromo: Coupon = { ...promo, status: 'Claimed' };
+        const updatedPromo: Coupon = {
+          ...promo,
+          ...claimedFromApi,
+          status: 'Claimed',
+          expiration,
+          description: claimedFromApi.description || promo.description,
+          terms: claimedFromApi.terms || promo.terms,
+        };
         
         setSelectedPromo(updatedPromo);
         await addToWallet(updatedPromo);
@@ -513,6 +522,9 @@ export default function Promos() {
               You claimed the offer for:{'\n'}
               <Text style={{ fontWeight: '700', color: theme.textPrimary }}>{selectedPromo?.product_name}</Text>{'\n'}
               ({selectedPromo?.name})
+              {'\n\n'}
+              Your POS Code:{'\n'}
+              <Text style={{ fontWeight: '700', color: theme.textPrimary }}>{selectedPromo?.code || 'Generating...'}</Text>
             </Text>
             <TouchableOpacity
               style={[styles.modalButton, { backgroundColor: theme.accent }]}

@@ -95,6 +95,16 @@ export default function FoodDetail({ route, navigation }: any) {
     navigation.navigate('Login');
   };
 
+  const handleBackToFeed = () => {
+    const parentNavigation = navigation.getParent?.();
+    if (parentNavigation?.navigate) {
+      parentNavigation.navigate('Feed', { screen: 'FeedHome' });
+      return;
+    }
+
+    navigation.navigate('FeedHome');
+  };
+
   const handleFavoriteToggle = () => {
     if (!isLoggedIn) {
       if (isFav) {
@@ -186,7 +196,7 @@ export default function FoodDetail({ route, navigation }: any) {
 
           <TouchableOpacity
             style={[styles.backButton, { backgroundColor: 'rgba(0,0,0,0.35)' }]}
-            onPress={() => navigation.goBack()}
+            onPress={handleBackToFeed}
             activeOpacity={0.8}
           >
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />

@@ -30,6 +30,7 @@ import { getTheme, spacing, typography, radii, layout, palette } from '../../con
 const FEED_PAGE_SIZE = 8;
 const FEED_SCROLL_TOP_THRESHOLD = 550;
 const BEST_SELLER_FETCH_LIMIT = 20;
+const BEST_SELLER_EXCLUDED_CATEGORY_KEYS = new Set(['addon', 'addons', 'other', 'others']);
 
 type ApiProduct = {
   id?: number | string;
@@ -108,6 +109,19 @@ const getCategoryLabel = (category: ApiProduct['category']): string => {
   return 'Chef Special';
 };
 
+const normalizeBestSellerCategoryKey = (value: unknown): string =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+const isBestSellerEligibleCategory = (category: ApiProduct['category']): boolean => {
+  const categoryName = typeof category === 'string' ? category : category?.name;
+  const normalized = normalizeBestSellerCategoryKey(categoryName);
+  if (!normalized) return true;
+  return !BEST_SELLER_EXCLUDED_CATEGORY_KEYS.has(normalized);
+};
+
 function FeedHome({ navigation }: any) {
   const { isFavorite } = useFavorites();
   const { refreshReviews } = useReviews();
@@ -130,6 +144,13 @@ function FeedHome({ navigation }: any) {
   const [showFilter, setShowFilter] = React.useState(false);
 
   const fetchBestSellerProductIds = useCallback(async (productsSnapshot: ApiProduct[]) => {
+    const eligibleProductIds = new Set(
+      productsSnapshot
+        .filter((item) => isBestSellerEligibleCategory(item.category))
+        .map((item) => Math.trunc(toNumber(item.id)))
+        .filter((id) => id > 0)
+    );
+
     try {
       const bestSellersResponse = await api.get(
         `/firstapp/products/best-sellers/?period=weekly&limit=${BEST_SELLER_FETCH_LIMIT}`
@@ -137,7 +158,7 @@ function FeedHome({ navigation }: any) {
       const bestSellersRaw = extractArrayPayload<ApiProduct>(bestSellersResponse.data);
       const bestSellerIds = bestSellersRaw
         .map((item) => Math.trunc(toNumber(item.id)))
-        .filter((id) => id > 0);
+        .filter((id) => id > 0 && eligibleProductIds.has(id));
 
       if (bestSellerIds.length > 0) {
         setBestSellerProductIds(bestSellerIds);
@@ -156,11 +177,7 @@ function FeedHome({ navigation }: any) {
       const reviewsRaw = extractArrayPayload<ApiReview>(reviewsResponse.data);
       const weekStartMs = getCurrentWeekStartMs();
 
-      const validProductIds = new Set(
-        productsSnapshot
-          .map((item) => Math.trunc(toNumber(item.id)))
-          .filter((id) => id > 0)
-      );
+      const validProductIds = eligibleProductIds;
 
       const reviewSignalByProduct = new Map<number, number>();
       reviewsRaw.forEach((review) => {

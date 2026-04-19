@@ -29,6 +29,7 @@ import PrivacyPolicy from '../(tabs)/PrivacyPolicy';
 import TermsAndConditions from '../(tabs)/TermsAndConditions';
 import AboutTab from './AboutTab';
 import Notifications from './Notifications';
+import TransactionHistory from './TransactionHistory';
 import TabScreenBackground from './TabScreenBackground';
 
 import { useAuth } from '../context/AuthContext';
@@ -39,6 +40,7 @@ type DrawerParamList = {
   Tabs: undefined;
   Notifications: undefined;
   Profile: undefined;
+  TransactionHistory: undefined;
   FAQ: undefined;
   Login: { redirect?: string; promoId?: string; promoTitle?: string } | undefined;
   Signup: { redirect?: string; promoId?: string; promoTitle?: string } | undefined;
@@ -330,6 +332,7 @@ export default function MainDrawer() {
         <Drawer.Screen name="Login" component={Login} options={{ headerTitle: 'Login', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF', drawerItemStyle: { display: 'none' } }} />
         <Drawer.Screen name="Signup" component={Signup} options={{ headerTitle: 'Sign Up', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF', drawerItemStyle: { display: 'none' } }} />
         <Drawer.Screen name="ForgotPassword" component={ForgotPassword} options={{ headerTitle: 'Forgot Password', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF', drawerItemStyle: { display: 'none' } }} />
+        <Drawer.Screen name="TransactionHistory" component={TransactionHistory} options={{ headerTitle: 'My POS Transactions', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF', drawerItemStyle: { display: 'none' } }} />
         <Drawer.Screen name="Profile" component={Profile} options={{ headerTitle: 'Profile', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF', drawerItemStyle: { display: 'none' } }} />
         <Drawer.Screen name="FAQ" component={FAQScreen} options={{ headerTitle: 'FAQ', headerStyle: { backgroundColor: isDark ? theme.surfaceElevated : theme.accent }, headerTintColor: '#FFF', drawerItemStyle: { display: 'none' } }} />
         </Drawer.Navigator>

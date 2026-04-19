@@ -116,7 +116,7 @@ function FavoritesTab({ navigation }: any) {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? theme.background : 'transparent' }]}> 
+    <View style={[styles.container, { backgroundColor: isDark ? theme.background : 'transparent' }]}> 
       {favorites.length === 0 ? (
         renderEmptyState()
       ) : (
@@ -169,7 +169,7 @@ function FavoritesTab({ navigation }: any) {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 

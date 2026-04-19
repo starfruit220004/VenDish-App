@@ -20,7 +20,6 @@ const BASE_URL = (() => {
 const PUBLIC_PATH_PREFIXES = [
   '/firstapp/products/',
   '/firstapp/categories/',
-  '/firstapp/coupons/',
   '/firstapp/contact-page/',
   '/firstapp/about/',
   '/firstapp/services-page/',
